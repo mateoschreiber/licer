@@ -32,18 +32,16 @@ export class RequestingAreasService {
     const existing = await this.prisma.requestingArea.findFirst({
       where: {
         deletedAt: null,
-        OR: [
-          { name: dto.name },
-          ...(dto.code ? [{ code: dto.code }] : []),
-        ],
+        name: dto.name,
       },
     });
     if (existing) {
-      throw new ConflictException('Requesting area name or code already exists');
+      throw new ConflictException('Requesting area name already exists');
     }
+    const code = await this.generateCode(dto.name);
     return this.prisma.requestingArea.create({
       data: {
-        code: dto.code,
+        code,
         name: dto.name,
         description: dto.description,
         status: dto.status ?? 'ACTIVA',
@@ -98,5 +96,41 @@ export class RequestingAreasService {
       where: { id },
       data: { deletedAt: new Date(), status: 'INACTIVA' },
     });
+  }
+
+  private async generateCode(name: string) {
+    const baseCode = this.buildBaseCode(name);
+    const existingCodes = await this.prisma.requestingArea.findMany({
+      where: { code: { startsWith: baseCode } },
+      select: { code: true },
+    });
+    const usedCodes = new Set(existingCodes.map((area) => area.code).filter(Boolean));
+
+    if (!usedCodes.has(baseCode)) {
+      return baseCode;
+    }
+
+    let sequence = 2;
+    while (usedCodes.has(`${baseCode}-${String(sequence).padStart(2, '0')}`)) {
+      sequence += 1;
+    }
+    return `${baseCode}-${String(sequence).padStart(2, '0')}`;
+  }
+
+  private buildBaseCode(name: string) {
+    const words = this.normalizeCodeText(name)
+      .split(' ')
+      .filter(Boolean);
+    const raw = words.join('').slice(0, 3);
+    return (raw || 'ARE').slice(0, 3).padEnd(3, 'X');
+  }
+
+  private normalizeCodeText(value: string) {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9\s]/g, ' ')
+      .trim()
+      .toUpperCase();
   }
 }

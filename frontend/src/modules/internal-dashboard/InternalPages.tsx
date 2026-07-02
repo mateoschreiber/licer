@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Check, FilePlus, Search, X } from 'lucide-react';
+import { Check, FilePlus, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { api } from '../../shared/api/client';
 import { BidSummary, TenderSummary } from '../../shared/types';
 import { DataTable } from '../../shared/components/DataTable';
@@ -36,6 +36,7 @@ export function DashboardPage() {
 }
 
 export function UsersRolesPage() {
+  const queryClient = useQueryClient();
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
     queryFn: () => api.get<Row[]>('/users'),
@@ -44,10 +45,58 @@ export function UsersRolesPage() {
     queryKey: ['roles'],
     queryFn: () => api.get<Row[]>('/roles'),
   });
+  const { register, handleSubmit, reset } = useForm<{
+    email: string;
+    name: string;
+    password: string;
+    status: string;
+    roleIds: string[];
+  }>({
+    defaultValues: { status: 'ACTIVE', roleIds: [] },
+  });
+  const createUser = useMutation({
+    mutationFn: (values: { email: string; name: string; password: string; status: string; roleIds: string[] }) =>
+      api.post('/users', {
+        ...values,
+        roleIds: Array.isArray(values.roleIds) ? values.roleIds : [values.roleIds].filter(Boolean),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      reset({ status: 'ACTIVE', roleIds: [] });
+    },
+  });
+  const updateUserStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => api.patch(`/users/${id}`, { status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
 
   return (
     <>
-      <PageHeader title="Usuarios y roles" />
+      <PageHeader title="Usuarios y roles" description="Alta de usuarios internos y consulta de roles asignables." />
+      <section className="panel">
+        <form className="grid-form compact" onSubmit={handleSubmit((values) => createUser.mutate(values))}>
+          <label>Email<input type="email" {...register('email', { required: true })} /></label>
+          <label>Nombre<input {...register('name', { required: true })} /></label>
+          <label>Clave inicial<input type="password" minLength={8} {...register('password', { required: true })} /></label>
+          <label>Estado
+            <select {...register('status')}>
+              <option value="ACTIVE">Activo</option>
+              <option value="INACTIVE">Inactivo</option>
+              <option value="BLOCKED">Bloqueado</option>
+            </select>
+          </label>
+          <label className="full">Roles
+            <select multiple size={Math.min(Math.max(roles.length, 3), 6)} {...register('roleIds', { required: true })}>
+              {roles.map((role) => (
+                <option key={String(role.id)} value={String(role.id)}>{String(role.name)}</option>
+              ))}
+            </select>
+          </label>
+          <button className="button primary" type="submit" disabled={createUser.isPending}>
+            <Plus size={16} /> Crear usuario
+          </button>
+        </form>
+      </section>
       <div className="split">
         <section>
           <h2>Usuarios</h2>
@@ -56,7 +105,31 @@ export function UsersRolesPage() {
             columns={[
               { key: 'email', header: 'Email', render: (row) => String(row.email) },
               { key: 'name', header: 'Nombre', render: (row) => String(row.name) },
+              {
+                key: 'roles',
+                header: 'Roles',
+                render: (row) => Array.isArray(row.roles)
+                  ? row.roles.map((item) => String((item as { role?: { name?: string } }).role?.name ?? '')).filter(Boolean).join(', ')
+                  : '-',
+              },
               { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
+              {
+                key: 'actions',
+                header: 'Acciones',
+                render: (row) => (
+                  <div className="row-actions">
+                    {row.status === 'ACTIVE' ? (
+                      <button className="button ghost" type="button" onClick={() => updateUserStatus.mutate({ id: String(row.id), status: 'INACTIVE' })}>
+                        <X size={16} /> Inactivar
+                      </button>
+                    ) : (
+                      <button className="button ghost" type="button" onClick={() => updateUserStatus.mutate({ id: String(row.id), status: 'ACTIVE' })}>
+                        <Check size={16} /> Activar
+                      </button>
+                    )}
+                  </div>
+                ),
+              },
             ]}
           />
         </section>
@@ -168,6 +241,22 @@ interface TenderForm {
   bidDeadline: string;
 }
 
+interface TenderLineItem {
+  lot: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  specs: string;
+}
+
+const emptyTenderItem: TenderLineItem = {
+  lot: '',
+  description: '',
+  unit: 'unidad',
+  quantity: 1,
+  specs: '',
+};
+
 function getDefaultDates() {
   const now = new Date();
   const today = toDateTimeLocal(now);
@@ -193,6 +282,7 @@ export function TenderCreateEditPage() {
   });
   const [questionEdited, setQuestionEdited] = useState(false);
   const [bidEdited, setBidEdited] = useState(false);
+  const [items, setItems] = useState<TenderLineItem[]>([{ ...emptyTenderItem }]);
 
   const { data: areas = [] } = useQuery({
     queryKey: ['requesting-areas'],
@@ -230,12 +320,38 @@ export function TenderCreateEditPage() {
         ? new Date(values.bidDeadline).toISOString()
         : undefined,
     });
+    const validItems = items.filter((item) => item.description.trim() && Number(item.quantity) > 0);
+    await Promise.all(validItems.map((item) => api.post(`/tenders/${tender.id}/items`, {
+      lot: item.lot || undefined,
+      description: item.description,
+      unit: item.unit || 'unidad',
+      quantity: Number(item.quantity),
+      specs: item.specs || undefined,
+    })));
     navigate(`/internal/tenders/${tender.id}`);
+  }
+
+  function updateItem(index: number, field: keyof TenderLineItem, value: string) {
+    setItems((current) => current.map((item, itemIndex) => (
+      itemIndex === index
+        ? { ...item, [field]: field === 'quantity' ? Number(value) : value }
+        : item
+    )));
+  }
+
+  function addItem() {
+    setItems((current) => [...current, { ...emptyTenderItem }]);
+  }
+
+  function removeItem(index: number) {
+    setItems((current) => current.length === 1
+      ? [{ ...emptyTenderItem }]
+      : current.filter((_, itemIndex) => itemIndex !== index));
   }
 
   return (
     <>
-      <PageHeader title="Crear licitacion" description="El codigo se genera automaticamente. Las fechas son editables." />
+      <PageHeader title="Crear licitacion" description="Formato estandar con datos generales, fechas e items del proceso." />
       <section className="panel">
         <form className="grid-form" onSubmit={handleSubmit(onSubmit)}>
           <label>Titulo<input {...register('title', { required: true })} /></label>
@@ -260,6 +376,39 @@ export function TenderCreateEditPage() {
             <small>Autocompletado (+30 dias), editable</small>
           </label>
           <label className="full">Descripcion<textarea {...register('description', { required: true })} /></label>
+          <div className="full line-items">
+            <div className="section-heading">
+              <div>
+                <h2>Items de la licitacion</h2>
+                <p>Agregue renglones como en una factura: lote, descripcion, unidad y cantidad.</p>
+              </div>
+              <button className="button ghost" type="button" onClick={addItem}>
+                <Plus size={16} /> Agregar item
+              </button>
+            </div>
+            <div className="line-items-table">
+              <div className="line-items-head">
+                <span>Lote</span>
+                <span>Descripcion</span>
+                <span>Unidad</span>
+                <span>Cantidad</span>
+                <span>Especificaciones</span>
+                <span>Accion</span>
+              </div>
+              {items.map((item, index) => (
+                <div className="line-items-row" key={index}>
+                  <input value={item.lot} onChange={(event) => updateItem(index, 'lot', event.target.value)} placeholder="Lote 1" />
+                  <input value={item.description} onChange={(event) => updateItem(index, 'description', event.target.value)} placeholder="Producto o servicio" required={index === 0} />
+                  <input value={item.unit} onChange={(event) => updateItem(index, 'unit', event.target.value)} placeholder="unidad" />
+                  <input type="number" min="0.0001" step="0.0001" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} />
+                  <input value={item.specs} onChange={(event) => updateItem(index, 'specs', event.target.value)} placeholder="Marca, modelo, medidas, condiciones" />
+                  <button className="button ghost" type="button" onClick={() => removeItem(index)}>
+                    <Trash2 size={16} /> Quitar
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
           <button className="button primary" type="submit" disabled={formState.isSubmitting}>Guardar</button>
         </form>
       </section>
@@ -653,17 +802,26 @@ export function AuditLogsPage() {
 
 export function RequestingAreasPage() {
   const queryClient = useQueryClient();
+  const [editingArea, setEditingArea] = useState<Row | null>(null);
   const { data = [] } = useQuery({
     queryKey: ['requesting-areas'],
     queryFn: () => api.get<Row[]>('/requesting-areas'),
   });
 
-  const { register, handleSubmit, reset } = useForm<{ name: string; code: string; description: string }>();
+  const { register, handleSubmit, reset, setValue } = useForm<{ name: string; code: string; description: string }>();
 
   const create = useMutation({
-    mutationFn: (values: { name: string; code: string; description: string }) => api.post('/requesting-areas', values),
+    mutationFn: (values: { name: string; description: string }) => api.post('/requesting-areas', values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['requesting-areas'] });
+      reset();
+    },
+  });
+  const update = useMutation({
+    mutationFn: ({ id, values }: { id: string; values: { name: string; code: string; description: string } }) => api.patch(`/requesting-areas/${id}`, values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['requesting-areas'] });
+      setEditingArea(null);
       reset();
     },
   });
@@ -678,15 +836,42 @@ export function RequestingAreasPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['requesting-areas'] }),
   });
 
+  function startEdit(row: Row) {
+    setEditingArea(row);
+    setValue('code', String(row.code ?? ''));
+    setValue('name', String(row.name ?? ''));
+    setValue('description', String(row.description ?? ''));
+  }
+
+  function cancelEdit() {
+    setEditingArea(null);
+    reset();
+  }
+
   return (
     <>
-      <PageHeader title="Areas Solicitantes" description="Gestion de areas que pueden solicitar licitaciones." />
+      <PageHeader title="Areas Solicitantes" description="Crear, editar, activar/inactivar y anular areas que solicitan licitaciones." />
       <section className="panel">
-        <form className="grid-form compact" onSubmit={handleSubmit((values) => create.mutate(values))}>
-          <label>Codigo<input {...register('code')} placeholder="Opcional" /></label>
+        <form className="grid-form compact" onSubmit={handleSubmit((values) => {
+          if (editingArea) {
+            update.mutate({ id: String(editingArea.id), values });
+            return;
+          }
+          create.mutate(values);
+        })}>
+          {editingArea ? (
+            <label>Codigo auditable<input {...register('code')} /></label>
+          ) : null}
           <label>Nombre<input {...register('name', { required: true })} /></label>
           <label className="full">Descripcion<input {...register('description')} /></label>
-          <button className="button primary" type="submit">Crear area</button>
+          <button className="button primary" type="submit">
+            {editingArea ? <><Check size={16} /> Guardar cambios</> : <><Plus size={16} /> Crear area</>}
+          </button>
+          {editingArea ? (
+            <button className="button ghost" type="button" onClick={cancelEdit}>
+              <X size={16} /> Cancelar edicion
+            </button>
+          ) : null}
         </form>
       </section>
       <DataTable
@@ -694,23 +879,27 @@ export function RequestingAreasPage() {
         columns={[
           { key: 'code', header: 'Codigo', render: (row) => String(row.code ?? '-') },
           { key: 'name', header: 'Nombre', render: (row) => String(row.name) },
+          { key: 'description', header: 'Descripcion', render: (row) => String(row.description ?? '-') },
           { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
           {
             key: 'actions',
-            header: '',
+            header: 'Acciones',
             render: (row) => (
               <div className="row-actions">
+                <button className="button ghost" type="button" onClick={() => startEdit(row)}>
+                  <Pencil size={16} /> Editar
+                </button>
                 {row.status === 'ACTIVA' ? (
-                  <button className="icon-button" type="button" onClick={() => toggleStatus.mutate({ id: String(row.id), status: 'INACTIVA' })} title="Inactivar">
-                    <X size={16} />
+                  <button className="button ghost" type="button" onClick={() => toggleStatus.mutate({ id: String(row.id), status: 'INACTIVA' })}>
+                    <X size={16} /> Inactivar
                   </button>
                 ) : (
-                  <button className="icon-button" type="button" onClick={() => toggleStatus.mutate({ id: String(row.id), status: 'ACTIVA' })} title="Activar">
-                    <Check size={16} />
+                  <button className="button ghost" type="button" onClick={() => toggleStatus.mutate({ id: String(row.id), status: 'ACTIVA' })}>
+                    <Check size={16} /> Activar
                   </button>
                 )}
-                <button className="icon-button danger" type="button" onClick={() => { if (confirm('Anular area solicitante?')) remove.mutate(String(row.id)); }} title="Anular">
-                  <X size={16} />
+                <button className="button danger" type="button" onClick={() => { if (confirm('Anular area solicitante?')) remove.mutate(String(row.id)); }}>
+                  <Trash2 size={16} /> Anular
                 </button>
               </div>
             ),
