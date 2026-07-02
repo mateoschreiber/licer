@@ -56,6 +56,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (!roles.length) {
         return true;
       }
+      if (user?.roles.includes('ADMIN')) {
+        return true;
+      }
       return Boolean(user?.roles.some((role) => roles.includes(role)));
     },
     [user],

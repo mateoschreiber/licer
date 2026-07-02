@@ -35,6 +35,10 @@ export class CreateTenderDto {
 
   @IsOptional()
   @IsDateString()
+  publishedAt?: string;
+
+  @IsOptional()
+  @IsDateString()
   questionDeadline?: string;
 
   @IsOptional()

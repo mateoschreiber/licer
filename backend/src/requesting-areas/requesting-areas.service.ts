@@ -30,10 +30,16 @@ export class RequestingAreasService {
 
   async create(dto: CreateRequestingAreaDto) {
     const existing = await this.prisma.requestingArea.findFirst({
-      where: { name: dto.name, deletedAt: null },
+      where: {
+        deletedAt: null,
+        OR: [
+          { name: dto.name },
+          ...(dto.code ? [{ code: dto.code }] : []),
+        ],
+      },
     });
     if (existing) {
-      throw new ConflictException('Requesting area name already exists');
+      throw new ConflictException('Requesting area name or code already exists');
     }
     return this.prisma.requestingArea.create({
       data: {
@@ -59,6 +65,14 @@ export class RequestingAreasService {
       });
       if (duplicate) {
         throw new ConflictException('Requesting area name already exists');
+      }
+    }
+    if (dto.code && dto.code !== area.code) {
+      const duplicateCode = await this.prisma.requestingArea.findFirst({
+        where: { code: dto.code, deletedAt: null, id: { not: id } },
+      });
+      if (duplicateCode) {
+        throw new ConflictException('Requesting area code already exists');
       }
     }
 

@@ -1,6 +1,5 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { Tender } from '@prisma/client';
 import { AuthenticatedUser } from '../common/auth/authenticated-user.interface';
 import { ROLES } from '../common/constants/roles';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -67,22 +66,33 @@ export class TendersService {
   }
 
   async create(dto: CreateTenderDto, user: AuthenticatedUser) {
-    const defaults = this.applyDateDefaults({});
+    const dates = this.resolveTenderDates(dto);
     const code = dto.code ?? await this.generateTenderCode();
     const data = this.toTenderData(dto, user.id) as Prisma.TenderUncheckedCreateInput;
     return this.prisma.tender.create({
       data: {
         ...data,
         code,
-        ...defaults,
+        ...dates,
         requestingAreaId: dto.requestingAreaId ?? undefined,
       },
     });
   }
 
   async update(id: string, dto: UpdateTenderDto) {
-    await this.ensureTender(id);
+    const tender = await this.ensureTender(id, {
+      id: true,
+      createdAt: true,
+      publishedAt: true,
+      questionDeadline: true,
+      bidDeadline: true,
+    });
     const data = this.toTenderData(dto) as Prisma.TenderUncheckedUpdateInput;
+    this.assertDateOrder({
+      baseDate: dto.publishedAt ? this.parseDate(dto.publishedAt, 'Fecha base invalida') : (tender.publishedAt ?? tender.createdAt),
+      questionDeadline: dto.questionDeadline ? this.parseDate(dto.questionDeadline, 'Limite de consultas invalido') : tender.questionDeadline,
+      bidDeadline: dto.bidDeadline ? this.parseDate(dto.bidDeadline, 'Limite de ofertas invalido') : tender.bidDeadline,
+    });
     return this.prisma.tender.update({
       where: { id },
       data,
@@ -130,21 +140,21 @@ export class TendersService {
     });
   }
 
-  private async ensureTender(id: string) {
+  private async ensureTender<T extends Prisma.TenderSelect>(
+    id: string,
+    select?: T,
+  ): Promise<Prisma.TenderGetPayload<{ select: T }>> {
     const tender = await this.prisma.tender.findFirst({
       where: { id, deletedAt: null },
-      select: { id: true },
+      select: select ?? ({ id: true } as T),
     });
     if (!tender) {
       throw new NotFoundException('Tender not found');
     }
+    return tender as Prisma.TenderGetPayload<{ select: T }>;
   }
 
   private toTenderData(dto: UpdateTenderDto, buyerId?: string) {
-    if (dto.bidDeadline && Number.isNaN(Date.parse(dto.bidDeadline))) {
-      throw new ForbiddenException('Invalid bid deadline');
-    }
-
     return {
       code: dto.code,
       title: dto.title,
@@ -153,34 +163,75 @@ export class TendersService {
       requesterArea: dto.requesterArea,
       allowBidReplacement: dto.allowBidReplacement,
       buyerId,
-      questionDeadline: dto.questionDeadline
-        ? new Date(dto.questionDeadline)
+      publishedAt: dto.publishedAt
+        ? this.parseDate(dto.publishedAt, 'Fecha base invalida')
         : undefined,
-      bidDeadline: dto.bidDeadline ? new Date(dto.bidDeadline) : undefined,
+      questionDeadline: dto.questionDeadline
+        ? this.parseDate(dto.questionDeadline, 'Limite de consultas invalido')
+        : undefined,
+      bidDeadline: dto.bidDeadline
+        ? this.parseDate(dto.bidDeadline, 'Limite de ofertas invalido')
+        : undefined,
       evaluationStart: dto.evaluationStart
-        ? new Date(dto.evaluationStart)
+        ? this.parseDate(dto.evaluationStart, 'Fecha de evaluacion invalida')
         : undefined,
       estimatedAwardAt: dto.estimatedAwardAt
-        ? new Date(dto.estimatedAwardAt)
+        ? this.parseDate(dto.estimatedAwardAt, 'Fecha estimada de adjudicacion invalida')
         : undefined,
     };
   }
 
-  private applyDateDefaults(data: Partial<Pick<Tender, 'bidDeadline' | 'questionDeadline' | 'createdAt'>>) {
-    const now = new Date();
-    const plus15 = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000);
-    const plus30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  private resolveTenderDates(dto: CreateTenderDto) {
+    const baseDate = dto.publishedAt
+      ? this.parseDate(dto.publishedAt, 'Fecha base invalida')
+      : new Date();
+    const questionDeadline = dto.questionDeadline
+      ? this.parseDate(dto.questionDeadline, 'Limite de consultas invalido')
+      : this.endOfDay(this.addDays(baseDate, 15));
+    const bidDeadline = dto.bidDeadline
+      ? this.parseDate(dto.bidDeadline, 'Limite de ofertas invalido')
+      : this.endOfDay(this.addDays(baseDate, 30));
 
-    const questionDeadline = data.questionDeadline ? undefined : plus15;
-    const bidDeadline = data.bidDeadline ? undefined : plus30;
+    this.assertDateOrder({ baseDate, questionDeadline, bidDeadline });
 
-    const result: Record<string, unknown> = {};
-    if (questionDeadline) {
-      result.questionDeadline = new Date(new Date(questionDeadline).setHours(23, 59, 59, 999));
+    return {
+      publishedAt: dto.publishedAt ? baseDate : undefined,
+      questionDeadline,
+      bidDeadline,
+    };
+  }
+
+  private parseDate(value: string, message: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException(message);
     }
-    if (bidDeadline) {
-      result.bidDeadline = new Date(new Date(bidDeadline).setHours(23, 59, 59, 999));
+    return date;
+  }
+
+  private assertDateOrder(dates: {
+    baseDate: Date;
+    questionDeadline: Date | null;
+    bidDeadline: Date;
+  }) {
+    if (dates.questionDeadline && dates.questionDeadline < dates.baseDate) {
+      throw new BadRequestException('El limite de consultas no puede ser anterior a la fecha base');
     }
+    if (dates.questionDeadline && dates.bidDeadline < dates.questionDeadline) {
+      throw new BadRequestException('El limite de ofertas no puede ser anterior al limite de consultas');
+    }
+    if (!dates.questionDeadline && dates.bidDeadline < dates.baseDate) {
+      throw new BadRequestException('El limite de ofertas no puede ser anterior a la fecha base');
+    }
+  }
+
+  private addDays(date: Date, days: number) {
+    return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+  }
+
+  private endOfDay(date: Date) {
+    const result = new Date(date);
+    result.setHours(23, 59, 59, 999);
     return result;
   }
 

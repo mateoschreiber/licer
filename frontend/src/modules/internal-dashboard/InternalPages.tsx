@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -163,17 +163,22 @@ interface TenderForm {
   title: string;
   description: string;
   requestingAreaId: string;
+  publishedAt: string;
   questionDeadline: string;
   bidDeadline: string;
 }
 
 function getDefaultDates() {
   const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-  const today = local.toISOString().slice(0, 16);
-  const plus15 = new Date(local.getTime() + 15 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
-  const plus30 = new Date(local.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+  const today = toDateTimeLocal(now);
+  const plus15 = toDateTimeLocal(new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000));
+  const plus30 = toDateTimeLocal(new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000));
   return { today, plus15, plus30 };
+}
+
+function toDateTimeLocal(date: Date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
 }
 
 export function TenderCreateEditPage() {
@@ -181,10 +186,13 @@ export function TenderCreateEditPage() {
   const defaults = getDefaultDates();
   const { register, handleSubmit, formState, watch, setValue } = useForm<TenderForm>({
     defaultValues: {
+      publishedAt: defaults.today,
       questionDeadline: defaults.plus15,
       bidDeadline: defaults.plus30,
     },
   });
+  const [questionEdited, setQuestionEdited] = useState(false);
+  const [bidEdited, setBidEdited] = useState(false);
 
   const { data: areas = [] } = useQuery({
     queryKey: ['requesting-areas'],
@@ -193,13 +201,28 @@ export function TenderCreateEditPage() {
 
   const activeAreas = areas.filter((a) => a.status === 'ACTIVA');
 
-  const questionDeadlineWatcher = watch('questionDeadline');
+  const publishedAt = watch('publishedAt');
+
+  useEffect(() => {
+    if (!publishedAt) return;
+    const base = new Date(publishedAt);
+    if (Number.isNaN(base.getTime())) return;
+    if (!questionEdited) {
+      setValue('questionDeadline', toDateTimeLocal(new Date(base.getTime() + 15 * 24 * 60 * 60 * 1000)));
+    }
+    if (!bidEdited) {
+      setValue('bidDeadline', toDateTimeLocal(new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000)));
+    }
+  }, [bidEdited, publishedAt, questionEdited, setValue]);
 
   async function onSubmit(values: TenderForm) {
     const tender = await api.post<TenderSummary>('/tenders', {
       title: values.title,
       description: values.description,
       requestingAreaId: values.requestingAreaId || undefined,
+      publishedAt: values.publishedAt
+        ? new Date(values.publishedAt).toISOString()
+        : undefined,
       questionDeadline: values.questionDeadline
         ? new Date(values.questionDeadline).toISOString()
         : undefined,
@@ -210,21 +233,16 @@ export function TenderCreateEditPage() {
     navigate(`/internal/tenders/${tender.id}`);
   }
 
-  function recalcOfferDeadline() {
-    const qDate = questionDeadlineWatcher;
-    if (qDate) {
-      const base = new Date(qDate);
-      const plus15 = new Date(base.getTime() + 15 * 24 * 60 * 60 * 1000);
-      setValue('bidDeadline', plus15.toISOString().slice(0, 16));
-    }
-  }
-
   return (
     <>
       <PageHeader title="Crear licitacion" description="El codigo se genera automaticamente. Las fechas son editables." />
       <section className="panel">
         <form className="grid-form" onSubmit={handleSubmit(onSubmit)}>
           <label>Titulo<input {...register('title', { required: true })} /></label>
+          <label>Fecha base
+            <input type="datetime-local" {...register('publishedAt')} />
+            <small>Autocompletado, editable</small>
+          </label>
           <label>Area solicitante
             <select {...register('requestingAreaId')}>
               <option value="">Seleccionar...</option>
@@ -234,11 +252,11 @@ export function TenderCreateEditPage() {
             </select>
           </label>
           <label>Limite consultas
-            <input type="datetime-local" {...register('questionDeadline')} onChange={(e) => { register('questionDeadline').onChange(e); recalcOfferDeadline(); }} />
+            <input type="datetime-local" {...register('questionDeadline', { onChange: () => setQuestionEdited(true) })} />
             <small>Autocompletado (+15 dias), editable</small>
           </label>
           <label>Limite ofertas
-            <input type="datetime-local" {...register('bidDeadline')} />
+            <input type="datetime-local" {...register('bidDeadline', { onChange: () => setBidEdited(true) })} />
             <small>Autocompletado (+30 dias), editable</small>
           </label>
           <label className="full">Descripcion<textarea {...register('description', { required: true })} /></label>
@@ -447,6 +465,7 @@ interface AwardResolveResponse {
     tender?: { id: string; code: string; title: string; status: string; currency: string };
     supplier?: { id: string; ruc: string; legalName: string; tradeName: string | null; status: string };
   }>;
+  options?: Array<{ id: string; ruc: string; legalName: string; tradeName: string | null; status: string }>;
   warnings?: string[];
   message?: string;
 }
@@ -474,11 +493,11 @@ export function AwardCancelDesertPage() {
     },
   });
 
-  async function handleResolve() {
-    if (!identifier.trim()) return;
+  async function resolveIdentifier(value: string) {
+    if (!value.trim()) return;
     setResolveLoading(true);
     try {
-      const result = await api.get<AwardResolveResponse>(`/awards/resolve?identifier=${encodeURIComponent(identifier.trim())}`);
+      const result = await api.get<AwardResolveResponse>(`/awards/resolve?identifier=${encodeURIComponent(value.trim())}`);
       setResolveResult(result);
 
       if (result.mode === 'single') {
@@ -498,6 +517,10 @@ export function AwardCancelDesertPage() {
     } finally {
       setResolveLoading(false);
     }
+  }
+
+  async function handleResolve() {
+    await resolveIdentifier(identifier);
   }
 
   function selectEligibleBid(bid: { id: string; totalAmount: string; supplier?: { id: string }; tender?: { id: string } }) {
@@ -551,6 +574,22 @@ export function AwardCancelDesertPage() {
                 </ul>
               </div>
             )}
+            {resolveResult.warnings?.map((w, i) => <small key={i} className="warning">{w}</small>)}
+          </div>
+        )}
+
+        {resolveResult?.mode === 'multiple' && (
+          <div className="resolve-preview">
+            <strong>Resultados posibles:</strong>
+            <ul className="bid-list">
+              {resolveResult.options?.map((option) => (
+                <li key={option.id}>
+                  <button className="link-button" type="button" onClick={() => { setIdentifier(option.ruc); void resolveIdentifier(option.ruc); }}>
+                    {option.legalName} {option.tradeName ? `(${option.tradeName})` : ''} - RUC {option.ruc}
+                  </button>
+                </li>
+              ))}
+            </ul>
             {resolveResult.warnings?.map((w, i) => <small key={i} className="warning">{w}</small>)}
           </div>
         )}
