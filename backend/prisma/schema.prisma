@@ -1,0 +1,521 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum SupplierStatus {
+  PENDIENTE
+  ACTIVO
+  OBSERVADO
+  BLOQUEADO
+  INACTIVO
+}
+
+enum DocumentStatus {
+  PENDIENTE
+  APROBADO
+  OBSERVADO
+  VENCIDO
+  ANULADO
+}
+
+enum TenderStatus {
+  BORRADOR
+  REVISION
+  PUBLICADA
+  CONSULTAS_CERRADAS
+  RECEPCION
+  CERRADA
+  EVALUACION
+  ADJUDICADA
+  CANCELADA
+  DESIERTA
+  ARCHIVADA
+}
+
+enum TenderDocumentType {
+  BASE
+  ANEXO
+  ADDENDA
+  CONDICION
+  TECNICO
+}
+
+enum QuestionStatus {
+  PENDIENTE
+  RESPONDIDA
+  RECHAZADA
+  ANULADA
+}
+
+enum BidStatus {
+  BORRADOR
+  ENVIADA
+  REEMPLAZADA
+  ANULADA
+  EVALUADA
+}
+
+enum EvaluationCategory {
+  DOCUMENTAL
+  TECNICA
+  ECONOMICA
+}
+
+enum AwardStatus {
+  ADJUDICADA
+  CANCELADA
+  DESIERTA
+}
+
+enum AuditResult {
+  ALLOWED
+  DENIED
+  ERROR
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+model User {
+  id               String            @id @default(uuid()) @db.Uuid
+  email            String            @unique
+  passwordHash     String
+  name             String
+  status           UserStatus        @default(ACTIVE)
+  supplierId       String?           @db.Uuid
+  supplier         Supplier?         @relation(fields: [supplierId], references: [id])
+  lastLoginAt      DateTime?
+  failedLoginCount Int               @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+  roles            UserRole[]
+  tenderBuyer      Tender[]          @relation("TenderBuyer")
+  filesUploaded    FileObject[]      @relation("UploadedFiles")
+  documentsCreated TenderDocument[]  @relation("TenderDocumentCreator")
+  questions        Question[]        @relation("QuestionAuthor")
+  answers          Answer[]          @relation("AnswerAuthor")
+  bids             Bid[]             @relation("BidAuthor")
+  evaluationScores EvaluationScore[] @relation("EvaluatorScores")
+  awardsApproved   Award[]           @relation("AwardApprover")
+  auditLogs        AuditLog[]        @relation("ActorAuditLogs")
+  notifications    Notification[]
+
+  @@index([supplierId])
+  @@index([status])
+}
+
+model Role {
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(uuid()) @db.Uuid
+  code        String           @unique
+  resource    String
+  action      String
+  scope       String
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  roles       RolePermission[]
+
+  @@unique([resource, action, scope])
+}
+
+model UserRole {
+  userId     String   @db.Uuid
+  roleId     String   @db.Uuid
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  role       Role     @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+model RolePermission {
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model Supplier {
+  id           String             @id @default(uuid()) @db.Uuid
+  ruc          String             @unique
+  legalName    String
+  tradeName    String?
+  contactName  String
+  contactEmail String
+  phone        String?
+  address      String?
+  categories   String[]           @default([])
+  status       SupplierStatus     @default(PENDIENTE)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  deletedAt    DateTime?
+  users        User[]
+  documents    SupplierDocument[]
+  questions    Question[]
+  bids         Bid[]
+  awards       Award[]
+  notifications Notification[]
+
+  @@index([status])
+}
+
+model SupplierDocument {
+  id          String         @id @default(uuid()) @db.Uuid
+  supplierId  String         @db.Uuid
+  type        String
+  fileId      String         @db.Uuid
+  status      DocumentStatus @default(PENDIENTE)
+  expiresAt   DateTime?
+  voidedAt    DateTime?
+  voidReason  String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+  supplier    Supplier       @relation(fields: [supplierId], references: [id])
+  file        FileObject     @relation(fields: [fileId], references: [id])
+
+  @@index([supplierId])
+  @@index([fileId])
+  @@index([status])
+}
+
+model Tender {
+  id                String               @id @default(uuid()) @db.Uuid
+  code              String               @unique
+  title             String
+  description       String
+  status            TenderStatus         @default(BORRADOR)
+  currency          String               @default("PYG")
+  buyerId           String?              @db.Uuid
+  requesterArea     String?
+  allowBidReplacement Boolean            @default(true)
+  publishedAt       DateTime?
+  questionDeadline  DateTime?
+  bidDeadline       DateTime
+  evaluationStart   DateTime?
+  estimatedAwardAt  DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  deletedAt         DateTime?
+  buyer             User?                @relation("TenderBuyer", fields: [buyerId], references: [id])
+  items             TenderItem[]
+  documents         TenderDocument[]
+  questions         Question[]
+  bids              Bid[]
+  criteria          EvaluationCriteria[]
+  awards            Award[]
+  answers           Answer[]
+  notifications     Notification[]
+
+  @@index([status])
+  @@index([buyerId])
+  @@index([bidDeadline])
+}
+
+model TenderItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenderId    String    @db.Uuid
+  lot         String?
+  description String
+  unit        String
+  quantity    Decimal   @db.Decimal(18, 4)
+  specs       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  tender      Tender    @relation(fields: [tenderId], references: [id])
+  bidItems    BidItem[]
+
+  @@index([tenderId])
+}
+
+model TenderDocument {
+  id          String             @id @default(uuid()) @db.Uuid
+  tenderId    String             @db.Uuid
+  type        TenderDocumentType
+  version     Int                @default(1)
+  title       String
+  fileId      String             @db.Uuid
+  publishedAt DateTime?
+  voidedAt    DateTime?
+  voidReason  String?
+  createdById String?            @db.Uuid
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  tender      Tender             @relation(fields: [tenderId], references: [id])
+  file        FileObject         @relation(fields: [fileId], references: [id])
+  createdBy   User?              @relation("TenderDocumentCreator", fields: [createdById], references: [id])
+
+  @@index([tenderId])
+  @@index([fileId])
+  @@index([type])
+}
+
+model Question {
+  id         String         @id @default(uuid()) @db.Uuid
+  tenderId   String         @db.Uuid
+  supplierId String         @db.Uuid
+  userId     String         @db.Uuid
+  text       String
+  status     QuestionStatus @default(PENDIENTE)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  deletedAt  DateTime?
+  tender     Tender         @relation(fields: [tenderId], references: [id])
+  supplier   Supplier       @relation(fields: [supplierId], references: [id])
+  user       User           @relation("QuestionAuthor", fields: [userId], references: [id])
+  answer     Answer?
+
+  @@index([tenderId])
+  @@index([supplierId])
+  @@index([status])
+}
+
+model Answer {
+  id          String    @id @default(uuid()) @db.Uuid
+  questionId  String?   @unique @db.Uuid
+  tenderId    String    @db.Uuid
+  text        String
+  publishedAt DateTime?
+  authorId    String    @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  voidedAt    DateTime?
+  question    Question? @relation(fields: [questionId], references: [id])
+  tender      Tender    @relation(fields: [tenderId], references: [id])
+  author      User      @relation("AnswerAuthor", fields: [authorId], references: [id])
+
+  @@index([tenderId])
+  @@index([authorId])
+}
+
+model Bid {
+  id            String            @id @default(uuid()) @db.Uuid
+  tenderId      String            @db.Uuid
+  supplierId    String            @db.Uuid
+  userId        String            @db.Uuid
+  version       Int               @default(1)
+  status        BidStatus         @default(BORRADOR)
+  submittedAt   DateTime?
+  replacedById  String?           @db.Uuid
+  totalAmount   Decimal?          @db.Decimal(18, 2)
+  currency      String            @default("PYG")
+  validityDays  Int?
+  paymentTerms  String?
+  deliveryTerms String?
+  receiptCode   String?           @unique
+  voidedAt      DateTime?
+  voidReason    String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  deletedAt     DateTime?
+  tender        Tender            @relation(fields: [tenderId], references: [id])
+  supplier      Supplier          @relation(fields: [supplierId], references: [id])
+  user          User              @relation("BidAuthor", fields: [userId], references: [id])
+  replacedBy    Bid?              @relation("BidReplacement", fields: [replacedById], references: [id])
+  replaces      Bid[]             @relation("BidReplacement")
+  items         BidItem[]
+  documents     BidDocument[]
+  scores        EvaluationScore[]
+  awards        Award[]
+
+  @@unique([tenderId, supplierId, version])
+  @@index([tenderId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([submittedAt])
+}
+
+model BidItem {
+  id           String      @id @default(uuid()) @db.Uuid
+  bidId        String      @db.Uuid
+  tenderItemId String?     @db.Uuid
+  quantity     Decimal     @db.Decimal(18, 4)
+  unitPrice    Decimal     @db.Decimal(18, 2)
+  tax          Decimal     @default(0) @db.Decimal(18, 2)
+  total        Decimal     @db.Decimal(18, 2)
+  brandModel   String?
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  deletedAt    DateTime?
+  bid          Bid         @relation(fields: [bidId], references: [id])
+  tenderItem   TenderItem? @relation(fields: [tenderItemId], references: [id])
+
+  @@index([bidId])
+  @@index([tenderItemId])
+}
+
+model BidDocument {
+  id         String     @id @default(uuid()) @db.Uuid
+  bidId      String     @db.Uuid
+  fileId     String     @db.Uuid
+  type       String
+  uploadedAt DateTime   @default(now())
+  voidedAt   DateTime?
+  voidReason String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  bid        Bid        @relation(fields: [bidId], references: [id])
+  file       FileObject @relation(fields: [fileId], references: [id])
+
+  @@index([bidId])
+  @@index([fileId])
+}
+
+model EvaluationCriteria {
+  id          String             @id @default(uuid()) @db.Uuid
+  tenderId    String             @db.Uuid
+  category    EvaluationCategory
+  name        String
+  description String?
+  weight      Decimal            @db.Decimal(8, 2)
+  maxScore    Decimal            @db.Decimal(8, 2)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  deletedAt   DateTime?
+  tender      Tender             @relation(fields: [tenderId], references: [id])
+  scores      EvaluationScore[]
+
+  @@index([tenderId])
+  @@index([category])
+}
+
+model EvaluationScore {
+  id          String             @id @default(uuid()) @db.Uuid
+  bidId       String             @db.Uuid
+  criteriaId  String             @db.Uuid
+  evaluatorId String             @db.Uuid
+  score       Decimal            @db.Decimal(8, 2)
+  comment     String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  deletedAt   DateTime?
+  bid         Bid                @relation(fields: [bidId], references: [id])
+  criteria    EvaluationCriteria @relation(fields: [criteriaId], references: [id])
+  evaluator   User               @relation("EvaluatorScores", fields: [evaluatorId], references: [id])
+
+  @@unique([bidId, criteriaId, evaluatorId])
+  @@index([bidId])
+  @@index([criteriaId])
+  @@index([evaluatorId])
+}
+
+model Award {
+  id           String      @id @default(uuid()) @db.Uuid
+  tenderId     String      @db.Uuid
+  supplierId   String?     @db.Uuid
+  bidId        String?     @db.Uuid
+  amount       Decimal?    @db.Decimal(18, 2)
+  status       AwardStatus
+  reason       String
+  approvedById String      @db.Uuid
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  deletedAt    DateTime?
+  tender       Tender      @relation(fields: [tenderId], references: [id])
+  supplier     Supplier?   @relation(fields: [supplierId], references: [id])
+  bid          Bid?        @relation(fields: [bidId], references: [id])
+  approvedBy   User        @relation("AwardApprover", fields: [approvedById], references: [id])
+
+  @@index([tenderId])
+  @@index([supplierId])
+  @@index([status])
+}
+
+model FileObject {
+  id                String             @id @default(uuid()) @db.Uuid
+  storagePath       String
+  originalName      String
+  mime              String
+  size              BigInt
+  sha256            String
+  uploadedById      String             @db.Uuid
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  deletedAt         DateTime?
+  uploadedBy        User               @relation("UploadedFiles", fields: [uploadedById], references: [id])
+  supplierDocuments SupplierDocument[]
+  tenderDocuments   TenderDocument[]
+  bidDocuments      BidDocument[]
+
+  @@index([uploadedById])
+  @@index([sha256])
+}
+
+model AuditLog {
+  id        String      @id @default(uuid()) @db.Uuid
+  actorId   String?     @db.Uuid
+  role      String?
+  ip        String?
+  action    String
+  entity    String
+  entityId  String?
+  result    AuditResult
+  metadata  Json?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  actor     User?       @relation("ActorAuditLogs", fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([action])
+  @@index([entity])
+  @@index([entityId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id         String             @id @default(uuid()) @db.Uuid
+  userId     String?            @db.Uuid
+  supplierId String?            @db.Uuid
+  tenderId   String?            @db.Uuid
+  channel    String
+  subject    String
+  body       String
+  status     NotificationStatus @default(PENDING)
+  metadata   Json?
+  readAt     DateTime?
+  sentAt     DateTime?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  deletedAt  DateTime?
+  user       User?              @relation(fields: [userId], references: [id])
+  supplier   Supplier?          @relation(fields: [supplierId], references: [id])
+  tender     Tender?            @relation(fields: [tenderId], references: [id])
+
+  @@index([userId])
+  @@index([supplierId])
+  @@index([tenderId])
+  @@index([status])
+}

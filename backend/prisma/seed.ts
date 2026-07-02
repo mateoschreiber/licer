@@ -1,0 +1,248 @@
+import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
+
+const prisma = new PrismaClient();
+
+const permissions = [
+  'auth:login:public',
+  'auth:logout:own',
+  'users:create:internal',
+  'users:read:internal',
+  'users:update:internal',
+  'roles:create:internal',
+  'roles:read:internal',
+  'roles:update:internal',
+  'suppliers:register:public',
+  'suppliers:create:internal',
+  'suppliers:read:internal',
+  'suppliers:update:internal',
+  'suppliers:approve:internal',
+  'suppliers:block:internal',
+  'suppliers:read:own',
+  'suppliers:update:own',
+  'tenders:create:internal',
+  'tenders:read:internal',
+  'tenders:read:published',
+  'tenders:update:internal',
+  'tenders:publish:internal',
+  'tenders:close:internal',
+  'tender-documents:create:internal',
+  'tender-documents:read:internal',
+  'tender-documents:read:published',
+  'tender-documents:void:internal',
+  'questions:create:own',
+  'questions:read:own',
+  'questions:read:internal',
+  'questions:answer:internal',
+  'bids:create:own',
+  'bids:read:own',
+  'bids:submit:own',
+  'bids:replace:own',
+  'bids:read:internal',
+  'evaluations:create:internal',
+  'evaluations:read:internal',
+  'evaluations:update:internal',
+  'awards:create:internal',
+  'awards:cancel:internal',
+  'awards:desert:internal',
+  'audit:read:internal',
+  'files:download:own',
+  'files:download:internal',
+  'reports:read:internal',
+  'notifications:create:internal',
+  'notifications:read:own',
+] as const;
+
+const rolePermissions: Record<string, string[]> = {
+  ADMIN: [...permissions],
+  COMPRAS: [
+    'users:read:internal',
+    'suppliers:create:internal',
+    'suppliers:read:internal',
+    'suppliers:update:internal',
+    'suppliers:approve:internal',
+    'suppliers:block:internal',
+    'tenders:create:internal',
+    'tenders:read:internal',
+    'tenders:update:internal',
+    'tenders:publish:internal',
+    'tenders:close:internal',
+    'tender-documents:create:internal',
+    'tender-documents:read:internal',
+    'tender-documents:void:internal',
+    'questions:read:internal',
+    'questions:answer:internal',
+    'bids:read:internal',
+    'evaluations:read:internal',
+    'awards:create:internal',
+    'awards:cancel:internal',
+    'awards:desert:internal',
+    'files:download:internal',
+    'reports:read:internal',
+    'notifications:create:internal',
+  ],
+  AREA_SOLICITANTE: [
+    'tenders:create:internal',
+    'tenders:read:internal',
+    'tenders:update:internal',
+    'questions:read:internal',
+    'evaluations:read:internal',
+  ],
+  EVALUADOR_TECNICO: [
+    'suppliers:read:internal',
+    'tenders:read:internal',
+    'questions:read:internal',
+    'bids:read:internal',
+    'evaluations:create:internal',
+    'evaluations:read:internal',
+    'evaluations:update:internal',
+    'files:download:internal',
+  ],
+  EVALUADOR_ECONOMICO: [
+    'suppliers:read:internal',
+    'tenders:read:internal',
+    'bids:read:internal',
+    'evaluations:create:internal',
+    'evaluations:read:internal',
+    'evaluations:update:internal',
+    'files:download:internal',
+  ],
+  APROBADOR: [
+    'suppliers:read:internal',
+    'tenders:read:internal',
+    'bids:read:internal',
+    'evaluations:read:internal',
+    'awards:create:internal',
+    'awards:cancel:internal',
+    'awards:desert:internal',
+    'files:download:internal',
+    'reports:read:internal',
+  ],
+  AUDITOR: [
+    'users:read:internal',
+    'roles:read:internal',
+    'suppliers:read:internal',
+    'tenders:read:internal',
+    'tender-documents:read:internal',
+    'questions:read:internal',
+    'bids:read:internal',
+    'evaluations:read:internal',
+    'audit:read:internal',
+    'files:download:internal',
+    'reports:read:internal',
+  ],
+  PROVEEDOR: [
+    'suppliers:read:own',
+    'suppliers:update:own',
+    'tenders:read:published',
+    'tender-documents:read:published',
+    'questions:create:own',
+    'questions:read:own',
+    'bids:create:own',
+    'bids:read:own',
+    'bids:submit:own',
+    'bids:replace:own',
+    'files:download:own',
+    'notifications:read:own',
+  ],
+};
+
+for (const codes of Object.values(rolePermissions)) {
+  if (!codes.includes('auth:logout:own')) {
+    codes.push('auth:logout:own');
+  }
+}
+
+function parsePermission(code: string) {
+  const [resource, action, scope] = code.split(':');
+  return { resource, action, scope };
+}
+
+async function main() {
+  const permissionRows = new Map<string, { id: string }>();
+
+  for (const code of permissions) {
+    const parsed = parsePermission(code);
+    const row = await prisma.permission.upsert({
+      where: { code },
+      update: {
+        resource: parsed.resource,
+        action: parsed.action,
+        scope: parsed.scope,
+      },
+      create: {
+        code,
+        resource: parsed.resource,
+        action: parsed.action,
+        scope: parsed.scope,
+      },
+      select: { id: true },
+    });
+    permissionRows.set(code, row);
+  }
+
+  for (const [roleName, codes] of Object.entries(rolePermissions)) {
+    const role = await prisma.role.upsert({
+      where: { name: roleName },
+      update: { description: `Rol ${roleName}` },
+      create: { name: roleName, description: `Rol ${roleName}` },
+      select: { id: true },
+    });
+
+    await prisma.rolePermission.createMany({
+      data: codes.map((code) => ({
+        roleId: role.id,
+        permissionId: permissionRows.get(code)!.id,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@local.test';
+  const adminPassword = process.env.ADMIN_PASSWORD ?? 'ChangeMe123!';
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
+  const adminRole = await prisma.role.findUniqueOrThrow({
+    where: { name: 'ADMIN' },
+    select: { id: true },
+  });
+
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      name: 'Administrador',
+      passwordHash,
+      status: 'ACTIVE',
+    },
+    create: {
+      email: adminEmail,
+      name: 'Administrador',
+      passwordHash,
+      status: 'ACTIVE',
+    },
+    select: { id: true },
+  });
+
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId: {
+        userId: admin.id,
+        roleId: adminRole.id,
+      },
+    },
+    update: {},
+    create: {
+      userId: admin.id,
+      roleId: adminRole.id,
+    },
+  });
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (error) => {
+    console.error(error);
+    await prisma.$disconnect();
+    process.exit(1);
+  });
