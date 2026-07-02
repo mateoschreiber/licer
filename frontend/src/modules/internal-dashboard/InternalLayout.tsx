@@ -1,4 +1,5 @@
 import {
+  Building2,
   ClipboardCheck,
   FileText,
   Gavel,
@@ -30,6 +31,9 @@ export function InternalLayout() {
           </NavLink>
           <NavLink to="/internal/users-roles">
             <ShieldCheck size={18} /> Usuarios
+          </NavLink>
+          <NavLink to="/internal/requesting-areas">
+            <Building2 size={18} /> Areas Solicitantes
           </NavLink>
           <NavLink to="/internal/suppliers">
             <Users size={18} /> Proveedores

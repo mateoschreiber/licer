@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { Tender } from '@prisma/client';
 import { AuthenticatedUser } from '../common/auth/authenticated-user.interface';
 import { ROLES } from '../common/constants/roles';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -65,10 +66,17 @@ export class TendersService {
     return tender;
   }
 
-  create(dto: CreateTenderDto, user: AuthenticatedUser) {
+  async create(dto: CreateTenderDto, user: AuthenticatedUser) {
+    const defaults = this.applyDateDefaults({});
+    const code = dto.code ?? await this.generateTenderCode();
     const data = this.toTenderData(dto, user.id) as Prisma.TenderUncheckedCreateInput;
     return this.prisma.tender.create({
-      data,
+      data: {
+        ...data,
+        code,
+        ...defaults,
+        requestingAreaId: dto.requestingAreaId ?? undefined,
+      },
     });
   }
 
@@ -158,6 +166,45 @@ export class TendersService {
     };
   }
 
+  private applyDateDefaults(data: Partial<Pick<Tender, 'bidDeadline' | 'questionDeadline' | 'createdAt'>>) {
+    const now = new Date();
+    const plus15 = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000);
+    const plus30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const questionDeadline = data.questionDeadline ? undefined : plus15;
+    const bidDeadline = data.bidDeadline ? undefined : plus30;
+
+    const result: Record<string, unknown> = {};
+    if (questionDeadline) {
+      result.questionDeadline = new Date(new Date(questionDeadline).setHours(23, 59, 59, 999));
+    }
+    if (bidDeadline) {
+      result.bidDeadline = new Date(new Date(bidDeadline).setHours(23, 59, 59, 999));
+    }
+    return result;
+  }
+
+  private async generateTenderCode(): Promise<string> {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const datePrefix = `PK-${day}${month}${year}`;
+
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+
+    const countToday = await this.prisma.tender.count({
+      where: {
+        code: { startsWith: datePrefix },
+        createdAt: { gte: todayStart, lt: todayEnd },
+      },
+    });
+
+    const suffix = String(countToday + 1).padStart(3, '0');
+    return `${datePrefix}-${suffix}`;
+  }
+
   private supplierTenderSelect() {
     return {
       id: true,
@@ -194,7 +241,9 @@ export class TendersService {
       status: true,
       currency: true,
       buyerId: true,
+      requestingAreaId: true,
       requesterArea: true,
+      requestingArea: { select: { id: true, code: true, name: true, status: true } },
       allowBidReplacement: true,
       publishedAt: true,
       questionDeadline: true,

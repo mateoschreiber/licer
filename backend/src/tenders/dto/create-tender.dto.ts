@@ -3,11 +3,13 @@ import {
   IsDateString,
   IsOptional,
   IsString,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateTenderDto {
+  @IsOptional()
   @IsString()
-  code!: string;
+  code?: string;
 
   @IsString()
   title!: string;
@@ -18,6 +20,10 @@ export class CreateTenderDto {
   @IsOptional()
   @IsString()
   currency?: string;
+
+  @IsOptional()
+  @IsUUID()
+  requestingAreaId?: string;
 
   @IsOptional()
   @IsString()
@@ -31,8 +37,9 @@ export class CreateTenderDto {
   @IsDateString()
   questionDeadline?: string;
 
+  @IsOptional()
   @IsDateString()
-  bidDeadline!: string;
+  bidDeadline?: string;
 
   @IsOptional()
   @IsDateString()

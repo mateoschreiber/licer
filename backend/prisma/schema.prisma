@@ -91,6 +91,11 @@ enum NotificationStatus {
   READ
 }
 
+enum RequestingAreaStatus {
+  ACTIVA
+  INACTIVA
+}
+
 model User {
   id               String            @id @default(uuid()) @db.Uuid
   email            String            @unique
@@ -217,9 +222,10 @@ model Tender {
   description       String
   status            TenderStatus         @default(BORRADOR)
   currency          String               @default("PYG")
-  buyerId           String?              @db.Uuid
-  requesterArea     String?
-  allowBidReplacement Boolean            @default(true)
+  buyerId              String?              @db.Uuid
+  requestingAreaId     String?              @db.Uuid
+  requesterArea        String?
+  allowBidReplacement  Boolean              @default(true)
   publishedAt       DateTime?
   questionDeadline  DateTime?
   bidDeadline       DateTime
@@ -228,7 +234,8 @@ model Tender {
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   deletedAt         DateTime?
-  buyer             User?                @relation("TenderBuyer", fields: [buyerId], references: [id])
+  buyer              User?                @relation("TenderBuyer", fields: [buyerId], references: [id])
+  requestingArea     RequestingArea?      @relation(fields: [requestingAreaId], references: [id])
   items             TenderItem[]
   documents         TenderDocument[]
   questions         Question[]
@@ -451,6 +458,20 @@ model Award {
 
   @@index([tenderId])
   @@index([supplierId])
+  @@index([status])
+}
+
+model RequestingArea {
+  id          String                @id @default(uuid()) @db.Uuid
+  code        String?               @unique
+  name        String                @unique
+  description String?
+  status      RequestingAreaStatus  @default(ACTIVA)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  deletedAt   DateTime?
+  tenders     Tender[]
+
   @@index([status])
 }
 

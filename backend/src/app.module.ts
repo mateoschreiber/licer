@@ -21,6 +21,7 @@ import { FilesModule } from './files/files.module';
 import { ReportsModule } from './reports/reports.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RequestingAreasModule } from './requesting-areas/requesting-areas.module';
 import { HealthModule } from './health/health.module';
 
 @Module({
@@ -41,6 +42,7 @@ import { HealthModule } from './health/health.module';
     FilesModule,
     ReportsModule,
     NotificationsModule,
+    RequestingAreasModule,
     HealthModule,
   ],
   controllers: [AppController],

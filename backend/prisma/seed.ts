@@ -51,6 +51,10 @@ const permissions = [
   'reports:read:internal',
   'notifications:create:internal',
   'notifications:read:own',
+  'requesting-areas:create:internal',
+  'requesting-areas:read:internal',
+  'requesting-areas:update:internal',
+  'requesting-areas:delete:internal',
 ] as const;
 
 const rolePermissions: Record<string, string[]> = {
@@ -296,6 +300,22 @@ async function main() {
       roleId: supplierRole.id,
     },
   });
+
+  const defaultAreas = [
+    { code: 'ADM', name: 'Administracion', description: 'Area de Administracion General' },
+    { code: 'FIN', name: 'Finanzas', description: 'Area de Finanzas y Contabilidad' },
+    { code: 'SIS', name: 'Sistemas', description: 'Area de Sistemas y Tecnologia' },
+    { code: 'COM', name: 'Compras', description: 'Area de Compras y Abastecimiento' },
+    { code: 'OPE', name: 'Operaciones', description: 'Area de Operaciones' },
+  ];
+
+  for (const area of defaultAreas) {
+    await prisma.requestingArea.upsert({
+      where: { name: area.name },
+      update: { code: area.code, description: area.description, status: 'ACTIVA', deletedAt: null },
+      create: { code: area.code, name: area.name, description: area.description, status: 'ACTIVA' },
+    });
+  }
 }
 
 main()

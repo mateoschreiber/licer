@@ -56,6 +56,8 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
+  delete: <T>(path: string) =>
+    apiRequest<T>(path, { method: 'DELETE' }),
 };
 
 export async function downloadFile(path: string, fileName: string) {

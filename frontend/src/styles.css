@@ -509,3 +509,57 @@ th {
     display: grid;
   }
 }
+
+.search-field {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #f0f2ee;
+  border-radius: 8px;
+}
+
+.search-field label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.resolve-preview {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.resolve-preview .preview-row {
+  padding: 0.25rem 0;
+}
+
+.resolve-preview .warning {
+  color: #c62828;
+  display: block;
+  margin-top: 0.35rem;
+}
+
+.resolve-empty {
+  color: #888;
+  font-style: italic;
+  margin-bottom: 0.75rem;
+}
+
+.bid-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.35rem 0 0;
+}
+
+.bid-list li {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid #c8e6c9;
+}
+
+.bid-list li:hover {
+  background: #c8e6c9;
+  border-radius: 4px;
+}

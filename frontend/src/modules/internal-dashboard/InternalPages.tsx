@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Check, FilePlus, X } from 'lucide-react';
+import { Check, FilePlus, Search, X } from 'lucide-react';
 import { api } from '../../shared/api/client';
 import { BidSummary, TenderSummary } from '../../shared/types';
 import { DataTable } from '../../shared/components/DataTable';
@@ -162,36 +162,85 @@ interface TenderForm {
   code: string;
   title: string;
   description: string;
-  requesterArea: string;
-  bidDeadline: string;
+  requestingAreaId: string;
   questionDeadline: string;
+  bidDeadline: string;
+}
+
+function getDefaultDates() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  const today = local.toISOString().slice(0, 16);
+  const plus15 = new Date(local.getTime() + 15 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+  const plus30 = new Date(local.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+  return { today, plus15, plus30 };
 }
 
 export function TenderCreateEditPage() {
   const navigate = useNavigate();
-  const { register, handleSubmit, formState } = useForm<TenderForm>();
+  const defaults = getDefaultDates();
+  const { register, handleSubmit, formState, watch, setValue } = useForm<TenderForm>({
+    defaultValues: {
+      questionDeadline: defaults.plus15,
+      bidDeadline: defaults.plus30,
+    },
+  });
+
+  const { data: areas = [] } = useQuery({
+    queryKey: ['requesting-areas'],
+    queryFn: () => api.get<Array<{ id: string; code: string; name: string; status: string }>>('/requesting-areas'),
+  });
+
+  const activeAreas = areas.filter((a) => a.status === 'ACTIVA');
+
+  const questionDeadlineWatcher = watch('questionDeadline');
 
   async function onSubmit(values: TenderForm) {
     const tender = await api.post<TenderSummary>('/tenders', {
-      ...values,
-      bidDeadline: new Date(values.bidDeadline).toISOString(),
+      title: values.title,
+      description: values.description,
+      requestingAreaId: values.requestingAreaId || undefined,
       questionDeadline: values.questionDeadline
         ? new Date(values.questionDeadline).toISOString()
+        : undefined,
+      bidDeadline: values.bidDeadline
+        ? new Date(values.bidDeadline).toISOString()
         : undefined,
     });
     navigate(`/internal/tenders/${tender.id}`);
   }
 
+  function recalcOfferDeadline() {
+    const qDate = questionDeadlineWatcher;
+    if (qDate) {
+      const base = new Date(qDate);
+      const plus15 = new Date(base.getTime() + 15 * 24 * 60 * 60 * 1000);
+      setValue('bidDeadline', plus15.toISOString().slice(0, 16));
+    }
+  }
+
   return (
     <>
-      <PageHeader title="Crear licitacion" />
+      <PageHeader title="Crear licitacion" description="El codigo se genera automaticamente. Las fechas son editables." />
       <section className="panel">
         <form className="grid-form" onSubmit={handleSubmit(onSubmit)}>
-          <label>Codigo<input {...register('code', { required: true })} /></label>
           <label>Titulo<input {...register('title', { required: true })} /></label>
-          <label>Area solicitante<input {...register('requesterArea')} /></label>
-          <label>Limite consultas<input type="datetime-local" {...register('questionDeadline')} /></label>
-          <label>Limite ofertas<input type="datetime-local" {...register('bidDeadline', { required: true })} /></label>
+          <label>Area solicitante
+            <select {...register('requestingAreaId')}>
+              <option value="">Seleccionar...</option>
+              {activeAreas.map((area) => (
+                <option key={area.id} value={area.id}>{area.code ? `${area.code} - ` : ''}{area.name}</option>
+              ))}
+            </select>
+          </label>
+          <label>Limite consultas
+            <input type="datetime-local" {...register('questionDeadline')} onChange={(e) => { register('questionDeadline').onChange(e); recalcOfferDeadline(); }} />
+            <small>Autocompletado (+15 dias), editable</small>
+          </label>
+          <label>Limite ofertas
+            <input type="datetime-local" {...register('bidDeadline')} />
+            <small>Autocompletado (+30 dias), editable</small>
+          </label>
           <label className="full">Descripcion<textarea {...register('description', { required: true })} /></label>
           <button className="button primary" type="submit" disabled={formState.isSubmitting}>Guardar</button>
         </form>
@@ -382,8 +431,32 @@ export function InternalComparisonPage() {
   );
 }
 
+interface AwardResolveResponse {
+  mode: string;
+  matchedBy: string | null;
+  tender?: { id: string; code: string; title: string; status: string; currency: string };
+  supplier?: { id: string; ruc: string; legalName: string; tradeName: string | null; status: string };
+  bid?: { id: string; version: number; status: string; submittedAt: string; totalAmount: string; currency: string };
+  eligibleBids?: Array<{
+    id: string;
+    version: number;
+    status: string;
+    submittedAt: string;
+    totalAmount: string;
+    currency: string;
+    tender?: { id: string; code: string; title: string; status: string; currency: string };
+    supplier?: { id: string; ruc: string; legalName: string; tradeName: string | null; status: string };
+  }>;
+  warnings?: string[];
+  message?: string;
+}
+
 export function AwardCancelDesertPage() {
-  const { register, handleSubmit, reset } = useForm<{ tenderId: string; supplierId: string; bidId?: string; amount?: number; reason: string; mode: string }>();
+  const { register, handleSubmit, reset, setValue } = useForm<{ tenderId: string; supplierId: string; bidId?: string; amount?: number; reason: string; mode: string }>();
+  const [identifier, setIdentifier] = useState('');
+  const [resolveResult, setResolveResult] = useState<AwardResolveResponse | null>(null);
+  const [resolveLoading, setResolveLoading] = useState(false);
+
   const mutation = useMutation({
     mutationFn: (values: { tenderId: string; supplierId: string; bidId?: string; amount?: number; reason: string; mode: string }) => {
       if (values.mode === 'cancel') {
@@ -394,12 +467,98 @@ export function AwardCancelDesertPage() {
       }
       return api.post('/awards', values);
     },
-    onSuccess: () => reset(),
+    onSuccess: () => {
+      reset();
+      setResolveResult(null);
+      setIdentifier('');
+    },
   });
+
+  async function handleResolve() {
+    if (!identifier.trim()) return;
+    setResolveLoading(true);
+    try {
+      const result = await api.get<AwardResolveResponse>(`/awards/resolve?identifier=${encodeURIComponent(identifier.trim())}`);
+      setResolveResult(result);
+
+      if (result.mode === 'single') {
+        if (result.tender) {
+          setValue('tenderId', result.tender.id);
+        }
+        if (result.supplier) {
+          setValue('supplierId', result.supplier.id);
+        }
+        if (result.bid) {
+          setValue('bidId', result.bid.id);
+          if (result.bid.totalAmount) {
+            setValue('amount', Number(result.bid.totalAmount));
+          }
+        }
+      }
+    } finally {
+      setResolveLoading(false);
+    }
+  }
+
+  function selectEligibleBid(bid: { id: string; totalAmount: string; supplier?: { id: string }; tender?: { id: string } }) {
+    setValue('bidId', bid.id);
+    if (bid.totalAmount) setValue('amount', Number(bid.totalAmount));
+    if (bid.supplier?.id) setValue('supplierId', bid.supplier.id);
+    if (bid.tender?.id) setValue('tenderId', bid.tender.id);
+  }
 
   return (
     <>
       <PageHeader title="Adjudicar, cancelar o declarar desierta" />
+      <section className="panel">
+        <div className="search-field">
+          <label>Buscar por ID/Codigo/RUC/Nombre</label>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleResolve(); } }}
+              placeholder="Ej: tenderCode, bidId, supplierRUC..."
+            />
+            <button className="button primary" type="button" onClick={() => void handleResolve()} disabled={resolveLoading}>
+              <Search size={16} /> Buscar
+            </button>
+          </div>
+        </div>
+
+        {resolveResult?.mode === 'single' && (
+          <div className="resolve-preview">
+            {resolveResult.tender && (
+              <div className="preview-row"><strong>Licitacion:</strong> {resolveResult.tender.code} - {resolveResult.tender.title}</div>
+            )}
+            {resolveResult.supplier && (
+              <div className="preview-row"><strong>Proveedor:</strong> {resolveResult.supplier.legalName} (RUC: {resolveResult.supplier.ruc})</div>
+            )}
+            {resolveResult.bid && (
+              <div className="preview-row"><strong>Oferta:</strong> {resolveResult.bid.id} - {resolveResult.bid.status} - {resolveResult.bid.totalAmount} {resolveResult.bid.currency}</div>
+            )}
+            {resolveResult.eligibleBids && resolveResult.eligibleBids.length > 0 && (
+              <div>
+                <strong>Ofertas elegibles:</strong>
+                <ul className="bid-list">
+                  {resolveResult.eligibleBids.map((b) => (
+                    <li key={b.id} style={{ cursor: 'pointer' }} onClick={() => selectEligibleBid(b)}>
+                      {b.tender && `${b.tender.code} | `}
+                      {b.supplier && `${b.supplier.legalName} | `}
+                      {b.id.slice(0, 8)}... | {b.status} | {b.totalAmount} {b.currency}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {resolveResult.warnings?.map((w, i) => <small key={i} className="warning">{w}</small>)}
+          </div>
+        )}
+
+        {resolveResult?.mode === 'none' && (
+          <p className="resolve-empty">{resolveResult.message || 'Sin resultados'}</p>
+        )}
+      </section>
       <section className="panel">
         <form className="grid-form" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
           <label>Modo<select {...register('mode')}><option value="award">Adjudicar</option><option value="cancel">Cancelar</option><option value="desert">Desierta</option></select></label>
@@ -449,6 +608,76 @@ export function AuditLogsPage() {
         { key: 'entity', header: 'Entidad', render: (row) => String(row.entity) },
         { key: 'result', header: 'Resultado', render: (row) => <StatusBadge status={String(row.result)} /> },
       ]} />
+    </>
+  );
+}
+
+export function RequestingAreasPage() {
+  const queryClient = useQueryClient();
+  const { data = [] } = useQuery({
+    queryKey: ['requesting-areas'],
+    queryFn: () => api.get<Row[]>('/requesting-areas'),
+  });
+
+  const { register, handleSubmit, reset } = useForm<{ name: string; code: string; description: string }>();
+
+  const create = useMutation({
+    mutationFn: (values: { name: string; code: string; description: string }) => api.post('/requesting-areas', values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['requesting-areas'] });
+      reset();
+    },
+  });
+
+  const toggleStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => api.patch(`/requesting-areas/${id}`, { status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['requesting-areas'] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => api.delete(`/requesting-areas/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['requesting-areas'] }),
+  });
+
+  return (
+    <>
+      <PageHeader title="Areas Solicitantes" description="Gestion de areas que pueden solicitar licitaciones." />
+      <section className="panel">
+        <form className="grid-form compact" onSubmit={handleSubmit((values) => create.mutate(values))}>
+          <label>Codigo<input {...register('code')} placeholder="Opcional" /></label>
+          <label>Nombre<input {...register('name', { required: true })} /></label>
+          <label className="full">Descripcion<input {...register('description')} /></label>
+          <button className="button primary" type="submit">Crear area</button>
+        </form>
+      </section>
+      <DataTable
+        rows={data}
+        columns={[
+          { key: 'code', header: 'Codigo', render: (row) => String(row.code ?? '-') },
+          { key: 'name', header: 'Nombre', render: (row) => String(row.name) },
+          { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
+          {
+            key: 'actions',
+            header: '',
+            render: (row) => (
+              <div className="row-actions">
+                {row.status === 'ACTIVA' ? (
+                  <button className="icon-button" type="button" onClick={() => toggleStatus.mutate({ id: String(row.id), status: 'INACTIVA' })} title="Inactivar">
+                    <X size={16} />
+                  </button>
+                ) : (
+                  <button className="icon-button" type="button" onClick={() => toggleStatus.mutate({ id: String(row.id), status: 'ACTIVA' })} title="Activar">
+                    <Check size={16} />
+                  </button>
+                )}
+                <button className="icon-button danger" type="button" onClick={() => { if (confirm('Anular area solicitante?')) remove.mutate(String(row.id)); }} title="Anular">
+                  <X size={16} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
     </>
   );
 }

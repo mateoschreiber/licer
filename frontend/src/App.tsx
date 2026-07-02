@@ -29,6 +29,7 @@ import {
   ExpedientePage,
   InternalComparisonPage,
   QuestionsInboxPage,
+  RequestingAreasPage,
   SupplierDetailPage,
   SuppliersManagementPage,
   TechnicalEvaluationPage,
@@ -76,6 +77,7 @@ export function App() {
         <Route path="/internal" element={<InternalLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="users-roles" element={<UsersRolesPage />} />
+          <Route path="requesting-areas" element={<RequestingAreasPage />} />
           <Route path="suppliers" element={<SuppliersManagementPage />} />
           <Route path="suppliers/:id" element={<SupplierDetailPage />} />
           <Route path="tenders" element={<TendersManagementPage />} />

@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { AuthenticatedUser } from '../common/auth/authenticated-user.interface';
 import { AuditAction } from '../common/decorators/audit-action.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -30,5 +30,11 @@ export class AwardsController {
   @Post('desert')
   desert(@Body() dto: DecisionDto, @CurrentUser() user: AuthenticatedUser) {
     return this.awardsService.desert(dto, user);
+  }
+
+  @Permissions('awards:create:internal', 'awards:cancel:internal', 'awards:desert:internal')
+  @Get('resolve')
+  resolve(@Query('identifier') identifier: string) {
+    return this.awardsService.resolve(identifier);
   }
 }
