@@ -8,8 +8,6 @@ export class ApiError extends Error {
   }
 }
 
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
-
 function getToken() {
   return window.localStorage.getItem('access_token');
 }
@@ -28,7 +26,7 @@ export async function apiRequest<T>(
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers,
     credentials: 'include',
@@ -67,7 +65,7 @@ export async function downloadFile(path: string, fileName: string) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await fetch(`${API_URL}${path}`, {
     headers,
     credentials: 'include',
   });
@@ -84,3 +82,4 @@ export async function downloadFile(path: string, fileName: string) {
   anchor.click();
   URL.revokeObjectURL(href);
 }
+import { API_URL } from '../../config/api';

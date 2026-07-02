@@ -130,11 +130,23 @@ Valores por defecto de desarrollo:
 
 ## Pendiente fuera de esta fase
 
-- Docker Compose.
-- Nginx.
 - TLS.
 - Hardening Debian.
 - Backups productivos.
 - Integracion con correo real.
 - Storage S3/MinIO.
 - CI/CD.
+
+## Deploy LAN Debian
+
+La fase LAN con Docker Compose/Nginx esta documentada en:
+
+- `docs/DEPLOY_DEBIAN_LAN.md`
+- `docs/OPERACION_BASICA.md`
+- `docs/COMANDOS_VERIFICACION.md`
+
+URL objetivo:
+
+```text
+http://192.168.1.54
+```

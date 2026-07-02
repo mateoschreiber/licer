@@ -199,10 +199,14 @@ async function main() {
   }
 
   const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@local.test';
-  const adminPassword = process.env.ADMIN_PASSWORD ?? 'ChangeMe123!';
+  const adminPassword = process.env.ADMIN_PASSWORD ?? 'admin';
   const passwordHash = await bcrypt.hash(adminPassword, 12);
   const adminRole = await prisma.role.findUniqueOrThrow({
     where: { name: 'ADMIN' },
+    select: { id: true },
+  });
+  const supplierRole = await prisma.role.findUniqueOrThrow({
+    where: { name: 'PROVEEDOR' },
     select: { id: true },
   });
 
@@ -233,6 +237,63 @@ async function main() {
     create: {
       userId: admin.id,
       roleId: adminRole.id,
+    },
+  });
+
+  const testUserEmail = process.env.TEST_USER_EMAIL ?? 'prueba@local.test';
+  const testUserPassword = process.env.TEST_USER_PASSWORD ?? 'admin';
+  const testSupplierRuc = process.env.TEST_SUPPLIER_RUC ?? '80000000-0';
+  const testSupplier = await prisma.supplier.upsert({
+    where: { ruc: testSupplierRuc },
+    update: {
+      legalName: 'Proveedor Prueba',
+      tradeName: 'Proveedor Prueba',
+      contactName: 'Usuario Prueba',
+      contactEmail: testUserEmail,
+      status: 'ACTIVO',
+      categories: ['general'],
+    },
+    create: {
+      ruc: testSupplierRuc,
+      legalName: 'Proveedor Prueba',
+      tradeName: 'Proveedor Prueba',
+      contactName: 'Usuario Prueba',
+      contactEmail: testUserEmail,
+      status: 'ACTIVO',
+      categories: ['general'],
+    },
+    select: { id: true },
+  });
+
+  const testUser = await prisma.user.upsert({
+    where: { email: testUserEmail },
+    update: {
+      name: 'Proveedor Prueba',
+      passwordHash: await bcrypt.hash(testUserPassword, 12),
+      status: 'ACTIVE',
+      supplierId: testSupplier.id,
+    },
+    create: {
+      email: testUserEmail,
+      name: 'Proveedor Prueba',
+      passwordHash: await bcrypt.hash(testUserPassword, 12),
+      status: 'ACTIVE',
+      supplierId: testSupplier.id,
+    },
+    select: { id: true },
+  });
+
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId: {
+        userId: testUser.id,
+        roleId: supplierRole.id,
+      },
+    },
+    update: {},
+    create: {
+      userId: testUser.id,
+      roleId: supplierRole.id,
     },
   });
 }

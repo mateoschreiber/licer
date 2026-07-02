@@ -1,17 +1,38 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import cookieParser from 'cookie-parser';
+import cookieParser = require('cookie-parser');
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+
+function parseAllowedOrigins() {
+  const configured = process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173';
+  const origins = configured
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return new Set([
+    ...origins,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://192.168.1.54',
+  ]);
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const apiPrefix = process.env.API_PREFIX ?? '/api/v1';
-  const frontendOrigin = process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173';
+  const allowedOrigins = parseAllowedOrigins();
 
   app.setGlobalPrefix(apiPrefix.replace(/^\//, ''));
   app.enableCors({
-    origin: frontendOrigin,
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('CORS origin denied'), false);
+    },
     credentials: true,
   });
   app.use(cookieParser());
@@ -25,7 +46,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
 
   const port = Number(process.env.PORT ?? 3000);
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 }
 
 void bootstrap();
