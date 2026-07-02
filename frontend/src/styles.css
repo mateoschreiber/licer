@@ -475,6 +475,30 @@ th {
   gap: 16px;
 }
 
+.admin-crud-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.8fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-list-panel,
+.admin-form-panel {
+  min-width: 0;
+}
+
+.admin-form-panel {
+  position: sticky;
+  top: 18px;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .inline-field {
   display: flex;
   align-items: center;
@@ -564,8 +588,13 @@ th {
   .grid-form,
   .grid-form.compact,
   .metric-grid,
-  .split {
+  .split,
+  .admin-crud-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-form-panel {
+    position: static;
   }
 
   .page-header {

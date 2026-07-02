@@ -13,6 +13,52 @@ import { Timeline } from '../../shared/components/Timeline';
 
 type Row = Record<string, unknown>;
 
+interface RolePermissionRow {
+  permission?: {
+    id?: string;
+    code?: string;
+    description?: string | null;
+  };
+}
+
+interface RoleRow extends Row {
+  id: string;
+  name: string;
+  description?: string | null;
+  permissions?: RolePermissionRow[];
+}
+
+interface UserRoleRow {
+  role?: {
+    id?: string;
+    name?: string;
+  };
+}
+
+interface UserRow extends Row {
+  id: string;
+  email: string;
+  name: string;
+  status: string;
+  supplierId?: string | null;
+  roles?: UserRoleRow[];
+}
+
+interface UserFormValues {
+  email: string;
+  name: string;
+  password: string;
+  status: string;
+  supplierId: string;
+  roleIds: string[];
+}
+
+interface RoleFormValues {
+  name: string;
+  description: string;
+  permissionIds: string[];
+}
+
 export function DashboardPage() {
   const { data: tenders = [] } = useQuery({
     queryKey: ['internal-tenders'],
@@ -37,113 +83,275 @@ export function DashboardPage() {
 
 export function UsersRolesPage() {
   const queryClient = useQueryClient();
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [editingRole, setEditingRole] = useState<RoleRow | null>(null);
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
-    queryFn: () => api.get<Row[]>('/users'),
+    queryFn: () => api.get<UserRow[]>('/users'),
   });
   const { data: roles = [] } = useQuery({
     queryKey: ['roles'],
-    queryFn: () => api.get<Row[]>('/roles'),
+    queryFn: () => api.get<RoleRow[]>('/roles'),
   });
-  const { register, handleSubmit, reset } = useForm<{
-    email: string;
-    name: string;
-    password: string;
-    status: string;
-    roleIds: string[];
-  }>({
-    defaultValues: { status: 'ACTIVE', roleIds: [] },
+  const userForm = useForm<UserFormValues>({
+    defaultValues: { status: 'ACTIVE', roleIds: [], supplierId: '' },
   });
-  const createUser = useMutation({
-    mutationFn: (values: { email: string; name: string; password: string; status: string; roleIds: string[] }) =>
-      api.post('/users', {
-        ...values,
-        roleIds: Array.isArray(values.roleIds) ? values.roleIds : [values.roleIds].filter(Boolean),
-      }),
+  const roleForm = useForm<RoleFormValues>({
+    defaultValues: { permissionIds: [] },
+  });
+
+  const permissionOptions = Array.from(
+    roles.reduce((permissions, role) => {
+      role.permissions?.forEach((entry) => {
+        const permission = entry.permission;
+        if (permission?.id && permission.code) {
+          permissions.set(permission.id, permission);
+        }
+      });
+      return permissions;
+    }, new Map<string, { id?: string; code?: string; description?: string | null }>()),
+  ).map(([, permission]) => permission);
+
+  const saveUser = useMutation({
+    mutationFn: (values: UserFormValues) => {
+      const roleIds = Array.isArray(values.roleIds)
+        ? values.roleIds
+        : [values.roleIds].filter(Boolean);
+      const payload = {
+        email: values.email,
+        name: values.name,
+        status: values.status,
+        supplierId: values.supplierId || undefined,
+        roleIds,
+        ...(values.password ? { password: values.password } : {}),
+      };
+
+      return editingUser
+        ? api.patch(`/users/${editingUser.id}`, payload)
+        : api.post('/users', payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      reset({ status: 'ACTIVE', roleIds: [] });
+      setEditingUser(null);
+      userForm.reset({ status: 'ACTIVE', roleIds: [], supplierId: '', email: '', name: '', password: '' });
     },
   });
-  const updateUserStatus = useMutation({
+
+  const quickUserStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => api.patch(`/users/${id}`, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   });
 
+  const saveRole = useMutation({
+    mutationFn: (values: RoleFormValues) => {
+      const permissionIds = Array.isArray(values.permissionIds)
+        ? values.permissionIds
+        : [values.permissionIds].filter(Boolean);
+      const payload = {
+        name: values.name,
+        description: values.description || undefined,
+        permissionIds,
+      };
+      return editingRole
+        ? api.patch(`/roles/${editingRole.id}`, payload)
+        : api.post('/roles', payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      setEditingRole(null);
+      roleForm.reset({ name: '', description: '', permissionIds: [] });
+    },
+  });
+
+  function roleNames(user: UserRow) {
+    return user.roles?.map((item) => item.role?.name).filter(Boolean).join(', ') || '-';
+  }
+
+  function startUserCreate() {
+    setEditingUser(null);
+    userForm.reset({ status: 'ACTIVE', roleIds: [], supplierId: '', email: '', name: '', password: '' });
+  }
+
+  function startUserEdit(user: UserRow) {
+    setEditingUser(user);
+    userForm.reset({
+      email: user.email,
+      name: user.name,
+      password: '',
+      status: user.status,
+      supplierId: user.supplierId ?? '',
+      roleIds: user.roles?.map((item) => item.role?.id).filter(Boolean) as string[] ?? [],
+    });
+  }
+
+  function startRoleCreate() {
+    setEditingRole(null);
+    roleForm.reset({ name: '', description: '', permissionIds: [] });
+  }
+
+  function startRoleEdit(role: RoleRow) {
+    setEditingRole(role);
+    roleForm.reset({
+      name: role.name,
+      description: role.description ?? '',
+      permissionIds: role.permissions?.map((item) => item.permission?.id).filter(Boolean) as string[] ?? [],
+    });
+  }
+
   return (
     <>
-      <PageHeader title="Usuarios y roles" description="Alta de usuarios internos y consulta de roles asignables." />
-      <section className="panel">
-        <form className="grid-form compact" onSubmit={handleSubmit((values) => createUser.mutate(values))}>
-          <label>Email<input type="email" {...register('email', { required: true })} /></label>
-          <label>Nombre<input {...register('name', { required: true })} /></label>
-          <label>Clave inicial<input type="password" minLength={8} {...register('password', { required: true })} /></label>
-          <label>Estado
-            <select {...register('status')}>
-              <option value="ACTIVE">Activo</option>
-              <option value="INACTIVE">Inactivo</option>
-              <option value="BLOCKED">Bloqueado</option>
-            </select>
-          </label>
-          <label className="full">Roles
-            <select multiple size={Math.min(Math.max(roles.length, 3), 6)} {...register('roleIds', { required: true })}>
-              {roles.map((role) => (
-                <option key={String(role.id)} value={String(role.id)}>{String(role.name)}</option>
-              ))}
-            </select>
-          </label>
-          <button className="button primary" type="submit" disabled={createUser.isPending}>
-            <Plus size={16} /> Crear usuario
-          </button>
-        </form>
-      </section>
-      <div className="split">
-        <section>
-          <h2>Usuarios</h2>
+      <PageHeader title="Usuarios y roles" description="Administracion real de usuarios internos, estados, claves y roles." />
+      <section className="admin-crud-grid">
+        <div className="panel admin-list-panel">
+          <div className="section-heading">
+            <div>
+              <h2>Usuarios</h2>
+              <p>Seleccione un usuario para modificarlo. ADMIN puede editar cualquier cuenta interna.</p>
+            </div>
+            <button className="button primary" type="button" onClick={startUserCreate}>
+              <Plus size={16} /> Nuevo usuario
+            </button>
+          </div>
           <DataTable
             rows={users}
             columns={[
               { key: 'email', header: 'Email', render: (row) => String(row.email) },
               { key: 'name', header: 'Nombre', render: (row) => String(row.name) },
-              {
-                key: 'roles',
-                header: 'Roles',
-                render: (row) => Array.isArray(row.roles)
-                  ? row.roles.map((item) => String((item as { role?: { name?: string } }).role?.name ?? '')).filter(Boolean).join(', ')
-                  : '-',
-              },
+              { key: 'roles', header: 'Roles', render: (row) => roleNames(row as UserRow) },
               { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
               {
                 key: 'actions',
                 header: 'Acciones',
-                render: (row) => (
-                  <div className="row-actions">
-                    {row.status === 'ACTIVE' ? (
-                      <button className="button ghost" type="button" onClick={() => updateUserStatus.mutate({ id: String(row.id), status: 'INACTIVE' })}>
-                        <X size={16} /> Inactivar
+                render: (row) => {
+                  const user = row as UserRow;
+                  return (
+                    <div className="row-actions">
+                      <button className="button ghost" type="button" onClick={() => startUserEdit(user)}>
+                        <Pencil size={16} /> Editar
                       </button>
-                    ) : (
-                      <button className="button ghost" type="button" onClick={() => updateUserStatus.mutate({ id: String(row.id), status: 'ACTIVE' })}>
-                        <Check size={16} /> Activar
-                      </button>
-                    )}
-                  </div>
-                ),
+                      {user.status === 'ACTIVE' ? (
+                        <button className="button ghost" type="button" onClick={() => quickUserStatus.mutate({ id: user.id, status: 'INACTIVE' })}>
+                          <X size={16} /> Inactivar
+                        </button>
+                      ) : (
+                        <button className="button ghost" type="button" onClick={() => quickUserStatus.mutate({ id: user.id, status: 'ACTIVE' })}>
+                          <Check size={16} /> Activar
+                        </button>
+                      )}
+                    </div>
+                  );
+                },
               },
             ]}
           />
+        </div>
+
+        <section className="panel admin-form-panel">
+          <div className="section-heading">
+            <div>
+              <h2>{editingUser ? 'Editar usuario' : 'Crear usuario'}</h2>
+              <p>{editingUser ? editingUser.email : 'Complete los datos de alta.'}</p>
+            </div>
+          </div>
+          <form className="stack-form" onSubmit={userForm.handleSubmit((values) => saveUser.mutate(values))}>
+            <label>Email<input type="email" {...userForm.register('email', { required: true })} /></label>
+            <label>Nombre<input {...userForm.register('name', { required: true })} /></label>
+            <label>{editingUser ? 'Nueva clave (opcional)' : 'Clave inicial'}
+              <input type="password" minLength={8} {...userForm.register('password', { required: !editingUser })} />
+            </label>
+            <label>Estado
+              <select {...userForm.register('status')}>
+                <option value="ACTIVE">Activo</option>
+                <option value="INACTIVE">Inactivo</option>
+                <option value="BLOCKED">Bloqueado</option>
+              </select>
+            </label>
+            <label>Proveedor ID vinculado
+              <input {...userForm.register('supplierId')} placeholder="Solo para usuarios proveedor" />
+            </label>
+            <label>Roles
+              <select multiple size={Math.min(Math.max(roles.length, 4), 8)} {...userForm.register('roleIds', { required: true })}>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>{role.name}</option>
+                ))}
+              </select>
+            </label>
+            <div className="form-actions">
+              <button className="button primary" type="submit" disabled={saveUser.isPending}>
+                <Check size={16} /> {editingUser ? 'Guardar usuario' : 'Crear usuario'}
+              </button>
+              {editingUser ? (
+                <button className="button ghost" type="button" onClick={startUserCreate}>
+                  <X size={16} /> Cancelar
+                </button>
+              ) : null}
+            </div>
+          </form>
         </section>
-        <section>
-          <h2>Roles</h2>
+
+        <div className="panel admin-list-panel">
+          <div className="section-heading">
+            <div>
+              <h2>Roles</h2>
+              <p>Los permisos disponibles se toman de los roles existentes en el sistema.</p>
+            </div>
+            <button className="button primary" type="button" onClick={startRoleCreate}>
+              <Plus size={16} /> Nuevo rol
+            </button>
+          </div>
           <DataTable
             rows={roles}
             columns={[
               { key: 'name', header: 'Rol', render: (row) => String(row.name) },
               { key: 'description', header: 'Descripcion', render: (row) => String(row.description ?? '') },
+              {
+                key: 'permissions',
+                header: 'Permisos',
+                render: (row) => String((row as RoleRow).permissions?.length ?? 0),
+              },
+              {
+                key: 'actions',
+                header: 'Acciones',
+                render: (row) => (
+                  <button className="button ghost" type="button" onClick={() => startRoleEdit(row as RoleRow)}>
+                    <Pencil size={16} /> Editar
+                  </button>
+                ),
+              },
             ]}
           />
+        </div>
+
+        <section className="panel admin-form-panel">
+          <div className="section-heading">
+            <div>
+              <h2>{editingRole ? 'Editar rol' : 'Crear rol'}</h2>
+              <p>{editingRole ? editingRole.name : 'Defina nombre y permisos del rol.'}</p>
+            </div>
+          </div>
+          <form className="stack-form" onSubmit={roleForm.handleSubmit((values) => saveRole.mutate(values))}>
+            <label>Nombre del rol<input {...roleForm.register('name', { required: true })} /></label>
+            <label>Descripcion<input {...roleForm.register('description')} /></label>
+            <label>Permisos
+              <select multiple size={Math.min(Math.max(permissionOptions.length, 6), 12)} {...roleForm.register('permissionIds', { required: true })}>
+                {permissionOptions.map((permission) => (
+                  <option key={permission.id} value={permission.id}>{permission.code}</option>
+                ))}
+              </select>
+            </label>
+            <div className="form-actions">
+              <button className="button primary" type="submit" disabled={saveRole.isPending || permissionOptions.length === 0}>
+                <Check size={16} /> {editingRole ? 'Guardar rol' : 'Crear rol'}
+              </button>
+              {editingRole ? (
+                <button className="button ghost" type="button" onClick={startRoleCreate}>
+                  <X size={16} /> Cancelar
+                </button>
+              ) : null}
+            </div>
+          </form>
         </section>
-      </div>
+      </section>
     </>
   );
 }
