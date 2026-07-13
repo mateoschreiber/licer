@@ -38,6 +38,7 @@ interface UserRoleRow {
 interface UserRow extends Row {
   id: string;
   email: string;
+  username: string;
   name: string;
   status: string;
   supplierId?: string | null;
@@ -46,6 +47,7 @@ interface UserRow extends Row {
 
 interface UserFormValues {
   email: string;
+  username: string;
   name: string;
   password: string;
   status: string;
@@ -119,6 +121,7 @@ export function UsersRolesPage() {
         : [values.roleIds].filter(Boolean);
       const payload = {
         email: values.email,
+        username: values.username,
         name: values.name,
         status: values.status,
         supplierId: values.supplierId || undefined,
@@ -176,6 +179,7 @@ export function UsersRolesPage() {
     setEditingUser(user);
     userForm.reset({
       email: user.email,
+      username: user.username,
       name: user.name,
       password: '',
       status: user.status,
@@ -216,6 +220,7 @@ export function UsersRolesPage() {
             rows={users}
             columns={[
               { key: 'email', header: 'Email', render: (row) => String(row.email) },
+              { key: 'username', header: 'Usuario', render: (row) => String(row.username) },
               { key: 'name', header: 'Nombre', render: (row) => String(row.name) },
               { key: 'roles', header: 'Roles', render: (row) => roleNames(row as UserRow) },
               { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
@@ -255,6 +260,7 @@ export function UsersRolesPage() {
           </div>
           <form className="stack-form" onSubmit={userForm.handleSubmit((values) => saveUser.mutate(values))}>
             <label>Email<input type="email" {...userForm.register('email', { required: true })} /></label>
+            <label>Usuario<input autoComplete="username" {...userForm.register('username', { required: true, minLength: 3 })} /></label>
             <label>Nombre<input {...userForm.register('name', { required: true })} /></label>
             <label>{editingUser ? 'Nueva clave (opcional)' : 'Clave inicial'}
               <input type="password" minLength={8} {...userForm.register('password', { required: !editingUser })} />

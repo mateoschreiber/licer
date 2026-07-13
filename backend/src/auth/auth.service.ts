@@ -22,7 +22,7 @@ export class AuthService {
 
   async login(dto: LoginDto, ip?: string) {
     const user = await this.prisma.user.findFirst({
-      where: { email: dto.email, deletedAt: null },
+      where: { deletedAt: null, OR: [{ email: dto.email }, { username: dto.email }] },
       include: {
         roles: {
           include: {

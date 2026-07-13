@@ -202,7 +202,8 @@ async function main() {
     });
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@local.test';
+  const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@mail.com';
+  const adminUsername = process.env.ADMIN_USERNAME ?? 'admin';
   const adminPassword = process.env.ADMIN_PASSWORD ?? 'admin';
   const passwordHash = await bcrypt.hash(adminPassword, 12);
   const adminRole = await prisma.role.findUniqueOrThrow({
@@ -218,12 +219,14 @@ async function main() {
     where: { email: adminEmail },
     update: {
       name: 'Administrador',
+      username: adminUsername,
       passwordHash,
       status: 'ACTIVE',
     },
     create: {
       email: adminEmail,
       name: 'Administrador',
+      username: adminUsername,
       passwordHash,
       status: 'ACTIVE',
     },
@@ -245,6 +248,7 @@ async function main() {
   });
 
   const testUserEmail = process.env.TEST_USER_EMAIL ?? 'prueba@local.test';
+  const testUsername = process.env.TEST_USER_USERNAME ?? 'prueba';
   const testUserPassword = process.env.TEST_USER_PASSWORD ?? 'admin';
   const testSupplierRuc = process.env.TEST_SUPPLIER_RUC ?? '80000000-0';
   const testSupplier = await prisma.supplier.upsert({
@@ -273,6 +277,7 @@ async function main() {
     where: { email: testUserEmail },
     update: {
       name: 'Proveedor Prueba',
+      username: testUsername,
       passwordHash: await bcrypt.hash(testUserPassword, 12),
       status: 'ACTIVE',
       supplierId: testSupplier.id,
@@ -280,6 +285,7 @@ async function main() {
     create: {
       email: testUserEmail,
       name: 'Proveedor Prueba',
+      username: testUsername,
       passwordHash: await bcrypt.hash(testUserPassword, 12),
       status: 'ACTIVE',
       supplierId: testSupplier.id,

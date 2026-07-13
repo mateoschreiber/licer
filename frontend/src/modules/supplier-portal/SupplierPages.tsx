@@ -18,6 +18,7 @@ interface SupplierRegisterForm {
   tradeName?: string;
   contactName: string;
   contactEmail: string;
+  username: string;
   password: string;
 }
 
@@ -54,6 +55,10 @@ export function SupplierRegisterPage() {
           <label>
             Email
             <input type="email" {...register('contactEmail', { required: true })} />
+          </label>
+          <label>
+            Usuario
+            <input autoComplete="username" {...register('username', { required: true, minLength: 3 })} />
           </label>
           <label>
             Password

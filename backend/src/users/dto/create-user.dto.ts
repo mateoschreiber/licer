@@ -12,6 +12,9 @@ import { UserStatus } from '@prisma/client';
 export class CreateUserDto {
   @IsEmail()
   email!: string;
+  @IsString()
+  @MinLength(3)
+  username!: string;
 
   @IsString()
   @MinLength(8)

@@ -18,6 +18,7 @@ export class UsersService {
           ? {
               OR: [
                 { email: { contains: query.search, mode: 'insensitive' } },
+                { username: { contains: query.search, mode: 'insensitive' } },
                 { name: { contains: query.search, mode: 'insensitive' } },
               ],
             }
@@ -35,6 +36,7 @@ export class UsersService {
     return this.prisma.user.create({
       data: {
         email: dto.email,
+        username: dto.username,
         name: dto.name,
         passwordHash,
         status: dto.status ?? 'ACTIVE',
@@ -70,6 +72,7 @@ export class UsersService {
         where: { id },
         data: {
           email: dto.email,
+        username: dto.username,
           name: dto.name,
           passwordHash,
           status: dto.status,
@@ -84,6 +87,7 @@ export class UsersService {
     return {
       id: true,
       email: true,
+      username: true,
       name: true,
       status: true,
       supplierId: true,

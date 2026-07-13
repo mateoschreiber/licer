@@ -22,6 +22,9 @@ export class RegisterSupplierDto {
 
   @IsEmail()
   contactEmail!: string;
+  @IsString()
+  @MinLength(3)
+  username!: string;
 
   @IsOptional()
   @IsString()

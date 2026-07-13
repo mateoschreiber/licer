@@ -44,6 +44,7 @@ export class SuppliersService {
       await tx.user.create({
         data: {
           email: dto.contactEmail,
+          username: dto.username,
           name: dto.contactName,
           passwordHash,
           supplierId: supplier.id,

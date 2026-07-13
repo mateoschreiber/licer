@@ -38,8 +38,8 @@ export function LoginPage() {
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="stack-form">
           <label>
-            Email
-            <input type="email" {...register('email', { required: true })} />
+            Usuario o correo
+            <input type="text" autoComplete="username" {...register('email', { required: true })} />
           </label>
           <label>
             Password
