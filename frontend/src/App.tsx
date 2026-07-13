@@ -34,6 +34,8 @@ import {
   SuppliersManagementPage,
   TechnicalEvaluationPage,
   TenderCreateEditPage,
+  TenderCategoriesPage,
+  TenderBranchesPage,
   TenderDetailInternalPage,
   TendersManagementPage,
   UsersRolesPage,
@@ -82,6 +84,8 @@ export function App() {
           <Route path="suppliers/:id" element={<SupplierDetailPage />} />
           <Route path="tenders" element={<TendersManagementPage />} />
           <Route path="tenders/new" element={<TenderCreateEditPage />} />
+          <Route path="tenders/categories" element={<TenderCategoriesPage />} />
+          <Route path="tenders/branches" element={<TenderBranchesPage />} />
           <Route path="tenders/:id" element={<TenderDetailInternalPage />} />
           <Route path="documents" element={<DocumentsAddendasPage />} />
           <Route path="questions" element={<QuestionsInboxPage />} />

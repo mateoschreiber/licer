@@ -1,152 +1,75 @@
-# Portal de Licitaciones Privadas - Etapa 1
+# Licer | Portal de Licitaciones Privadas
 
-Monorepo para la fase de modulos/base funcional del Portal de Licitaciones Privadas.
+Portal de licitaciones privadas con administración interna y portal de proveedores.
 
-Stack definido:
+## Tecnologías
 
-- Backend: NestJS + TypeScript estricto
-- Frontend: React + TypeScript + Vite
-- Base de datos: PostgreSQL
-- ORM: Prisma
+- NestJS, TypeScript y Prisma
+- React, Vite y TypeScript
+- PostgreSQL 16
+- Docker Compose
 
-Esta etapa no incluye Docker, Nginx ni despliegue en Debian. La estructura queda preparada para incorporarlos en una fase posterior.
+## Inicio rápido
 
-## Modulos incluidos
-
-Backend:
-
-- auth
-- users
-- roles
-- suppliers
-- tenders
-- tender-documents
-- questions
-- bids
-- evaluations
-- awards
-- audit
-- notifications
-- reports
-- files
-- common
-
-Frontend:
-
-- auth
-- supplier-portal
-- internal-dashboard
-- suppliers
-- tenders
-- questions
-- bids
-- evaluations
-- awards
-- audit
-- files
-- shared
-
-## Reglas criticas implementadas como base
-
-- Deny-by-default en autorizacion backend.
-- Los proveedores solo acceden a datos vinculados a su `supplierId`.
-- Los proveedores no reciben datos, cantidades, rankings, participantes ni ofertas de terceros.
-- Los usuarios internos autorizados pueden ver ofertas enviadas inmediatamente.
-- Toda vista interna de oferta y toda descarga interna de archivo de oferta genera `AuditLog`.
-- El backend rechaza ofertas o reemplazos despues del plazo.
-- El proveedor debe estar `ACTIVO` para ofertar.
-- Documentos, ofertas y logs se anulan logicamente; no se eliminan fisicamente desde API.
-- Los paths de almacenamiento no se exponen en respuestas publicas.
-
-## Instalacion local
+Requiere Docker Engine con Docker Compose v2.
 
 ```bash
+git clone https://github.com/mateoschreiber/licer.git
+cd licer
+cp .env.production.example .env.production
+```
+
+Edite `.env.production` y cambie `POSTGRES_PASSWORD`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD`.
+
+```bash
+docker compose --env-file .env.production up -d postgres
+docker compose --env-file .env.production run --rm backend pnpm prisma:deploy
+docker compose --env-file .env.production run --rm backend pnpm prisma:seed
+docker compose --env-file .env.production up -d --build
+curl http://localhost:8088/api/v1/health
+```
+
+Abra `http://localhost:8088`.
+
+## localhost e IP dinámica
+
+No existe una IP LAN fija en el código ni en los archivos de ejemplo.
+
+- Servicios y verificaciones del servidor: `localhost`.
+- API del frontend: `/api/v1` (ruta relativa).
+- Usuarios de la red: `http://<IP_ACTUAL_DEL_SERVIDOR>:8088`.
+
+No establezca `VITE_API_URL` con una IP; debe ser `/api/v1`.
+
+## Desarrollo local
+
+```bash
+corepack enable
 pnpm install
-```
-
-## Variables de entorno
-
-Copiar `.env.example` y ajustar valores:
-
-```bash
-cp .env.example backend/.env
-cp .env.example frontend/.env
-```
-
-## Base de datos, migracion y seed
-
-Desde la raiz:
-
-```bash
 pnpm --filter @licer/backend prisma:generate
 pnpm --filter @licer/backend prisma:migrate
 pnpm --filter @licer/backend prisma:seed
+pnpm dev:backend
+pnpm dev:frontend
 ```
 
-## Ejecucion local
+- Web: `http://localhost:5173`
+- API: `http://localhost:3000/api/v1`
 
-Backend:
+## Calidad
 
 ```bash
-pnpm --filter @licer/backend dev
+pnpm format
+pnpm format:check
+pnpm build
+pnpm test
 ```
 
-Frontend:
+## Reglas operativas
 
-```bash
-pnpm --filter @licer/frontend dev
-```
+- Máximo de 2 MB por archivo adjunto.
+- Proveedores pueden adjuntar documentos propios.
+- Administradores pueden adjuntar documentos a cualquier proveedor.
+- No suba `.env.production`, respaldos, archivos privados ni claves.
 
-API base:
-
-```text
-http://localhost:3000/api/v1
-```
-
-Frontend:
-
-```text
-http://localhost:5173
-```
-
-## Pruebas
-
-```bash
-pnpm --filter @licer/backend test
-pnpm --filter @licer/frontend build
-```
-
-## Usuario seed
-
-El seed crea roles, permisos y un usuario administrador usando:
-
-- `ADMIN_EMAIL`
-- `ADMIN_PASSWORD`
-
-Valores por defecto de desarrollo:
-
-- Email: `admin@local.test`
-- Password: `ChangeMe123!`
-
-## Pendiente fuera de esta fase
-
-- TLS.
-- Hardening Debian.
-- Backups productivos.
-- Integracion con correo real.
-- Storage S3/MinIO.
-- CI/CD.
-
-## Deploy LAN Debian
-
-La fase LAN con Docker Compose/Nginx esta documentada en:
-
-- `docs/DEPLOY_DEBIAN_LAN.md`
-- `docs/OPERACION_BASICA.md`
-- `docs/COMANDOS_VERIFICACION.md`
-
-URL objetivo:
-
-```text
-http://192.168.1.54
-```
+Documentación: [desarrollo](docs/DEVELOPMENT.md), [despliegue](docs/DEPLOYMENT.md) y [seguridad](docs/SECURITY.md).

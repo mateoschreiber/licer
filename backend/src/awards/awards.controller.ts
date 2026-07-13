@@ -33,6 +33,12 @@ export class AwardsController {
   }
 
   @Permissions('awards:create:internal', 'awards:cancel:internal', 'awards:desert:internal')
+  @Get('suggestions')
+  suggestions(@Query('q') query: string, @Query('type') type?: string) {
+    return this.awardsService.suggestions(query, type);
+  }
+
+  @Permissions('awards:create:internal', 'awards:cancel:internal', 'awards:desert:internal')
   @Get('resolve')
   resolve(@Query('identifier') identifier: string) {
     return this.awardsService.resolve(identifier);

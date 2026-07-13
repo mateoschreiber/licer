@@ -60,6 +60,7 @@ export class QuestionsService {
       where,
       include: {
         answer: true,
+        tender: { select: { id: true, code: true, title: true } },
         ...(supplierView ? {} : { supplier: true, user: true }),
       },
       orderBy: { createdAt: 'desc' },

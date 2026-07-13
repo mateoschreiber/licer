@@ -7,6 +7,11 @@
     "dev:backend": "pnpm --filter @licer/backend dev",
     "dev:frontend": "pnpm --filter @licer/frontend dev",
     "build": "pnpm --filter @licer/backend build && pnpm --filter @licer/frontend build",
-    "test": "pnpm --filter @licer/backend test"
+    "test": "pnpm --filter @licer/backend test",
+    "format": "prettier --write --ignore-unknown .",
+    "format:check": "prettier --check --ignore-unknown ."
+  },
+  "devDependencies": {
+    "prettier": "3.5.3"
   }
 }

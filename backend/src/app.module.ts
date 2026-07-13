@@ -23,6 +23,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RequestingAreasModule } from './requesting-areas/requesting-areas.module';
 import { HealthModule } from './health/health.module';
+import { TenderCategoriesModule } from './tender-categories/tender-categories.module';
+import { TenderBranchesModule } from './tender-branches/tender-branches.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { HealthModule } from './health/health.module';
     NotificationsModule,
     RequestingAreasModule,
     HealthModule,
+    TenderCategoriesModule,
+    TenderBranchesModule,
   ],
   controllers: [AppController],
   providers: [

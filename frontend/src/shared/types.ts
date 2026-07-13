@@ -19,7 +19,7 @@ export interface TenderSummary {
   title: string;
   status: string;
   bidDeadline: string;
-  questionDeadline?: string;
+  questionDeadline?: string | null;
   currency: string;
 }
 
@@ -31,5 +31,10 @@ export interface BidSummary {
   status: string;
   submittedAt?: string;
   totalAmount?: string;
+  receiptCode?: string | null;
+  currency?: string;
+  paymentTerms?: string | null;
+  deliveryTerms?: string | null;
   tender?: TenderSummary;
+  supplier?: { id: string; ruc: string; legalName: string; tradeName?: string | null };
 }

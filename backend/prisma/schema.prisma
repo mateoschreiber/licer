@@ -179,6 +179,11 @@ model Supplier {
   tradeName    String?
   contactName  String
   contactEmail String
+  billingEmail String
+  billingAddress String
+  legalRepresentative String?
+  relevantContacts String?
+  clientRelationshipDuration String?
   phone        String?
   address      String?
   categories   String[]           @default([])
@@ -200,6 +205,7 @@ model SupplierDocument {
   id          String         @id @default(uuid()) @db.Uuid
   supplierId  String         @db.Uuid
   type        String
+  description String?
   fileId      String         @db.Uuid
   status      DocumentStatus @default(PENDIENTE)
   expiresAt   DateTime?
@@ -216,6 +222,23 @@ model SupplierDocument {
   @@index([status])
 }
 
+model TenderCategory {
+  id String @id @default(uuid()) @db.Uuid
+  name String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  tenders Tender[]
+}
+model TenderBranch {
+  id String @id @default(uuid()) @db.Uuid
+  name String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  tenders Tender[]
+}
+
 model Tender {
   id                String               @id @default(uuid()) @db.Uuid
   code              String               @unique
@@ -223,6 +246,14 @@ model Tender {
   description       String
   status            TenderStatus         @default(BORRADOR)
   currency          String               @default("PYG")
+  categoryId String? @db.Uuid
+  branchId String? @db.Uuid
+  responsibleEmail String?
+  responseDeadline DateTime?
+  vatIncluded Boolean @default(true)
+  paymentMethod String?
+  paymentTerms String?
+  offerValidityUntil DateTime?
   buyerId              String?              @db.Uuid
   requestingAreaId     String?              @db.Uuid
   requesterArea        String?
@@ -237,6 +268,8 @@ model Tender {
   deletedAt         DateTime?
   buyer              User?                @relation("TenderBuyer", fields: [buyerId], references: [id])
   requestingArea     RequestingArea?      @relation(fields: [requestingAreaId], references: [id])
+  category TenderCategory? @relation(fields: [categoryId], references: [id])
+  branch TenderBranch? @relation(fields: [branchId], references: [id])
   items             TenderItem[]
   documents         TenderDocument[]
   questions         Question[]
@@ -248,6 +281,8 @@ model Tender {
 
   @@index([status])
   @@index([buyerId])
+  @@index([categoryId])
+  @@index([branchId])
   @@index([bidDeadline])
 }
 
@@ -259,6 +294,10 @@ model TenderItem {
   unit        String
   quantity    Decimal   @db.Decimal(18, 4)
   specs       String?
+  referenceBrandModel String?
+  allowsEquivalent Boolean @default(false)
+  minimumWarranty String?
+  warrantyDocumentRequired Boolean @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -342,6 +381,7 @@ model Bid {
   validityDays  Int?
   paymentTerms  String?
   deliveryTerms String?
+  vatIncludedAccepted Boolean           @default(false)
   receiptCode   String?           @unique
   voidedAt      DateTime?
   voidReason    String?
@@ -373,7 +413,11 @@ model BidItem {
   unitPrice    Decimal     @db.Decimal(18, 2)
   tax          Decimal     @default(0) @db.Decimal(18, 2)
   total        Decimal     @db.Decimal(18, 2)
+  description  String?
+  brand        String?
+  model        String?
   brandModel   String?
+  pendingApproval Boolean  @default(false)
   notes        String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt

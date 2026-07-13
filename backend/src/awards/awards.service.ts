@@ -38,6 +38,68 @@ export class AwardsService {
     return this.decision(dto, user, 'DESIERTA');
   }
 
+  async suggestions(query: string, type = 'all') {
+    const term = query?.trim().toLowerCase();
+    if (!term || term.length < 2) return [];
+    const matches = (...values: Array<string | null | undefined>) =>
+      values.some((value) => value?.toLowerCase().includes(term));
+    const results: Array<Record<string, unknown>> = [];
+
+    if (type === 'all' || type === 'tender') {
+      const tenders = await this.prisma.tender.findMany({
+        where: { deletedAt: null },
+        select: { id: true, code: true, title: true },
+        take: 100,
+        orderBy: { createdAt: 'desc' },
+      });
+      results.push(...tenders
+        .filter((t) => matches(t.id, t.code, t.title))
+        .slice(0, 8)
+        .map((t) => ({ kind: 'tender', id: t.id, label: t.code + ' - ' + t.title, code: t.code, title: t.title })));
+    }
+
+    if (type === 'all' || type === 'supplier') {
+      const suppliers = await this.prisma.supplier.findMany({
+        where: { deletedAt: null },
+        select: { id: true, ruc: true, legalName: true, tradeName: true },
+        take: 100,
+        orderBy: { legalName: 'asc' },
+      });
+      results.push(...suppliers
+        .filter((supplier) => matches(supplier.id, supplier.ruc, supplier.legalName, supplier.tradeName))
+        .slice(0, 8)
+        .map((supplier) => ({ kind: 'supplier', id: supplier.id, label: supplier.ruc + ' - ' + supplier.legalName, ruc: supplier.ruc })));
+    }
+
+    if (type === 'all' || type === 'bid') {
+      const bids = await this.prisma.bid.findMany({
+        where: { deletedAt: null, status: { notIn: ['BORRADOR', 'ANULADA'] } },
+        include: {
+          tender: { select: { id: true, code: true, title: true } },
+          supplier: { select: { id: true, ruc: true, legalName: true } },
+        },
+        take: 100,
+        orderBy: { submittedAt: 'desc' },
+      });
+      results.push(...bids
+        .filter((bid) => matches(bid.id, bid.receiptCode, bid.tender.code, bid.tender.title, bid.supplier.ruc, bid.supplier.legalName))
+        .slice(0, 8)
+        .map((bid) => ({
+          kind: 'bid',
+          id: bid.id,
+          label: (bid.receiptCode ?? bid.id.slice(0, 8)) + ' - ' + bid.tender.code + ' - ' + bid.supplier.legalName,
+          receiptCode: bid.receiptCode,
+          tenderId: bid.tenderId,
+          tenderCode: bid.tender.code,
+          supplierId: bid.supplierId,
+          supplierRuc: bid.supplier.ruc,
+          amount: bid.totalAmount ? Number(bid.totalAmount) : undefined,
+        })));
+    }
+
+    return results.slice(0, 12);
+  }
+
   async resolve(identifier: string) {
     if (!identifier || identifier.trim().length === 0) {
       return { mode: 'none' as const, matchedBy: null };

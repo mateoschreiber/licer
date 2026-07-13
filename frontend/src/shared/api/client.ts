@@ -38,7 +38,14 @@ export async function apiRequest<T>(
     : await response.text();
 
   if (!response.ok) {
-    throw new ApiError('API request failed', response.status, payload);
+    const message = typeof payload === 'object' && payload !== null && 'message' in payload
+      ? Array.isArray(payload.message)
+        ? payload.message.join('. ')
+        : String(payload.message)
+      : response.status === 413
+        ? 'El archivo supera el limite maximo de 2 MB.'
+        : 'No se pudo completar la solicitud.';
+    throw new ApiError(message, response.status, payload);
   }
 
   return payload as T;

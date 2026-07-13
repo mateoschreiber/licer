@@ -18,3 +18,10 @@ frontend/vite.config.js
 frontend/vite.config.d.ts
 tmp/
 uploads/
+backups/
+storage/
+compose.yml.bak*
+*.bak
+*.backup
+*.tar.gz
+*.sql

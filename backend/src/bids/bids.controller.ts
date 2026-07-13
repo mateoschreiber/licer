@@ -1,13 +1,13 @@
-import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { AuthenticatedUser } from '../common/auth/authenticated-user.interface';
 import { RequestWithUser } from '../common/auth/request-with-user.interface';
 import { AuditAction } from '../common/decorators/audit-action.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Permissions } from '../common/decorators/permissions.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { BidsService } from './bids.service';
 import { CreateBidDto } from './dto/create-bid.dto';
-import { ReplaceBidDto } from './dto/replace-bid.dto';
 
 @Controller('bids')
 export class BidsController {
@@ -35,6 +35,14 @@ export class BidsController {
     return this.bidsService.findOne(id, user, request.ip);
   }
 
+  @Roles('ADMIN')
+  @Permissions('bids:read:internal')
+  @AuditAction({ action: 'BID_DELETE', entity: 'Bid' })
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.bidsService.remove(id);
+  }
+
   @Permissions('bids:submit:own')
   @AuditAction({ action: 'BID_SUBMIT', entity: 'Bid' })
   @Post(':id/submit')
@@ -42,14 +50,4 @@ export class BidsController {
     return this.bidsService.submit(id, user);
   }
 
-  @Permissions('bids:replace:own')
-  @AuditAction({ action: 'BID_REPLACE', entity: 'Bid' })
-  @Post(':id/replace')
-  replace(
-    @Param('id') id: string,
-    @Body() dto: ReplaceBidDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.bidsService.replace(id, dto, user);
-  }
 }

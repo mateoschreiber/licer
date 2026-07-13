@@ -1,0 +1,14 @@
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+backups/
+storage/
+.env*
+*.sql
+*.tar.gz
+compose.yml.bak*
+*.bak
+*.backup
+.dockerignore
+.github/

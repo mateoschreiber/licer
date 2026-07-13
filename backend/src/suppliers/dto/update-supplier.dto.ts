@@ -4,6 +4,10 @@ import { SupplierStatus } from '@prisma/client';
 export class UpdateSupplierDto {
   @IsOptional()
   @IsString()
+  ruc?: string;
+
+  @IsOptional()
+  @IsString()
   legalName?: string;
 
   @IsOptional()
@@ -17,6 +21,26 @@ export class UpdateSupplierDto {
   @IsOptional()
   @IsEmail()
   contactEmail?: string;
+
+  @IsOptional()
+  @IsEmail()
+  billingEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  billingAddress?: string;
+
+  @IsOptional()
+  @IsString()
+  legalRepresentative?: string;
+
+  @IsOptional()
+  @IsString()
+  relevantContacts?: string;
+
+  @IsOptional()
+  @IsString()
+  clientRelationshipDuration?: string;
 
   @IsOptional()
   @IsString()

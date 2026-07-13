@@ -11,6 +11,7 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 import { RegisterSupplierDto } from './dto/register-supplier.dto';
 import { SupplierActionDto } from './dto/supplier-action.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
+import { CreateSupplierDocumentDto } from './dto/create-supplier-document.dto';
 
 @Injectable()
 export class SuppliersService {
@@ -32,10 +33,15 @@ export class SuppliersService {
           ruc: dto.ruc,
           legalName: dto.legalName,
           tradeName: dto.tradeName,
-          contactName: dto.contactName,
-          contactEmail: dto.contactEmail,
+          contactName: dto.contactName ?? dto.legalRepresentative ?? dto.legalName,
+          contactEmail: dto.contactEmail ?? dto.billingEmail,
+          billingEmail: dto.billingEmail,
+          billingAddress: dto.billingAddress,
+          legalRepresentative: dto.legalRepresentative,
+          relevantContacts: dto.relevantContacts,
+          clientRelationshipDuration: dto.clientRelationshipDuration,
           phone: dto.phone,
-          address: dto.address,
+          address: dto.address ?? dto.billingAddress,
           categories: dto.categories,
           status: 'PENDIENTE',
         },
@@ -43,9 +49,9 @@ export class SuppliersService {
 
       await tx.user.create({
         data: {
-          email: dto.contactEmail,
+          email: dto.contactEmail ?? dto.billingEmail,
           username: dto.username,
-          name: dto.contactName,
+          name: dto.contactName ?? dto.legalRepresentative ?? dto.legalName,
           passwordHash,
           supplierId: supplier.id,
           roles: providerRole
@@ -73,7 +79,12 @@ export class SuppliersService {
             }
           : {}),
       },
-      include: { documents: true },
+      include: {
+        documents: {
+          where: { deletedAt: null, voidedAt: null },
+          include: { file: { select: { id: true, originalName: true, mime: true } } },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       skip,
       take: query.pageSize,
@@ -85,18 +96,31 @@ export class SuppliersService {
       throw new ForbiddenException('Supplier user required');
     }
 
-    return this.prisma.supplier.findFirstOrThrow({
-      where: { id: user.supplierId, deletedAt: null },
-      include: { documents: true },
+    return this.findOne(user.supplierId);
+  }
+
+  async findOne(id: string) {
+    const supplier = await this.prisma.supplier.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        documents: {
+          where: { deletedAt: null, voidedAt: null },
+          include: { file: { select: { id: true, originalName: true, mime: true } } },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     });
+    if (!supplier) {
+      throw new NotFoundException('Supplier not found');
+    }
+    return supplier;
   }
 
   async update(id: string, dto: UpdateSupplierDto, user: AuthenticatedUser) {
-    const targetId = user.roles.includes('PROVEEDOR') ? user.supplierId : id;
-    if (!targetId || (user.roles.includes('PROVEEDOR') && targetId !== id)) {
-      throw new ForbiddenException('Supplier ownership mismatch');
+    if (!user.roles.includes('ADMIN')) {
+      throw new ForbiddenException('Solo el administrador puede modificar proveedores');
     }
-
+    const targetId = id;
     const existing = await this.prisma.supplier.findFirst({
       where: { id: targetId, deletedAt: null },
     });
@@ -105,14 +129,89 @@ export class SuppliersService {
     }
 
     const data = { ...dto };
-    if (user.roles.includes('PROVEEDOR')) {
-      delete data.status;
-    }
 
     return this.prisma.supplier.update({
       where: { id: targetId },
       data,
     });
+  }
+
+  async addOwnDocument(dto: CreateSupplierDocumentDto, user: AuthenticatedUser) {
+    if (!user.supplierId || !user.roles.includes('PROVEEDOR')) {
+      throw new ForbiddenException('Supplier user required');
+    }
+    const [supplier, file] = await Promise.all([
+      this.prisma.supplier.findFirst({ where: { id: user.supplierId, deletedAt: null } }),
+      this.prisma.fileObject.findFirst({
+        where: { id: dto.fileId, deletedAt: null, uploadedById: user.id },
+      }),
+    ]);
+    if (!supplier) {
+      throw new NotFoundException('Supplier not found');
+    }
+    if (!file) {
+      throw new NotFoundException('File not found');
+    }
+
+    const document = await this.prisma.supplierDocument.create({
+      data: {
+        supplierId: supplier.id,
+        fileId: dto.fileId,
+        type: dto.type,
+        description: dto.description,
+      },
+      include: { file: { select: { id: true, originalName: true, mime: true } } },
+    });
+    await this.auditService.log({
+      actorId: user.id,
+      role: user.roles[0],
+      action: 'SUPPLIER_DOCUMENT_CREATE_OWN',
+      entity: 'SupplierDocument',
+      entityId: document.id,
+      result: 'ALLOWED',
+      metadata: { supplierId: supplier.id, type: dto.type, fileId: dto.fileId },
+    });
+    return document;
+  }
+
+  async addDocument(
+    supplierId: string,
+    dto: CreateSupplierDocumentDto,
+    user: AuthenticatedUser,
+  ) {
+    if (!user.roles.includes('ADMIN')) {
+      throw new ForbiddenException('Solo el administrador puede agregar documentos');
+    }
+    const [supplier, file] = await Promise.all([
+      this.prisma.supplier.findFirst({ where: { id: supplierId, deletedAt: null } }),
+      this.prisma.fileObject.findFirst({ where: { id: dto.fileId, deletedAt: null } }),
+    ]);
+    if (!supplier) {
+      throw new NotFoundException('Supplier not found');
+    }
+    if (!file) {
+      throw new NotFoundException('File not found');
+    }
+
+    const document = await this.prisma.supplierDocument.create({
+      data: {
+        supplierId,
+        fileId: dto.fileId,
+        type: dto.type,
+        description: dto.description,
+      },
+      include: { file: { select: { id: true, originalName: true, mime: true } } },
+    });
+    await this.auditService.log({
+      actorId: user.id,
+      role: user.roles[0],
+      action: 'SUPPLIER_DOCUMENT_CREATE',
+      entity: 'SupplierDocument',
+      entityId: document.id,
+      result: 'ALLOWED',
+      metadata: { supplierId, type: dto.type, fileId: dto.fileId },
+    });
+    return document;
   }
 
   async approve(id: string, dto: SupplierActionDto, user: AuthenticatedUser) {

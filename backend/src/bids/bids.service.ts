@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -10,7 +11,6 @@ import { ROLES } from '../common/constants/roles';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBidDto } from './dto/create-bid.dto';
-import { ReplaceBidDto } from './dto/replace-bid.dto';
 
 type BidWithTenderSupplier = Bid & {
   tender: Tender;
@@ -26,7 +26,7 @@ export class BidsService {
 
   async create(dto: CreateBidDto, user: AuthenticatedUser) {
     const supplierId = this.requireSupplier(user);
-    const [supplier, tender, lastBid] = await Promise.all([
+    const [supplier, tender, lastBid, existingBid] = await Promise.all([
       this.prisma.supplier.findUnique({ where: { id: supplierId } }),
       this.prisma.tender.findFirst({
         where: {
@@ -40,6 +40,15 @@ export class BidsService {
         orderBy: { version: 'desc' },
         select: { version: true },
       }),
+      this.prisma.bid.findFirst({
+        where: {
+          tenderId: dto.tenderId,
+          supplierId,
+          deletedAt: null,
+          status: { in: ['ENVIADA', 'EVALUADA', 'REEMPLAZADA'] },
+        },
+        select: { id: true },
+      }),
     ]);
 
     this.assertSupplierCanBid(supplier);
@@ -47,6 +56,10 @@ export class BidsService {
       throw new NotFoundException('Tender not found');
     }
     this.assertBidWindowOpen(tender);
+    if (existingBid) {
+      throw new BadRequestException('Ya presento una oferta para esta licitacion');
+    }
+    await this.validateBidItems(dto, tender.id);
 
     return this.prisma.bid.create({
       data: {
@@ -55,17 +68,22 @@ export class BidsService {
         userId: user.id,
         version: (lastBid?.version ?? 0) + 1,
         validityDays: dto.validityDays,
-        paymentTerms: dto.paymentTerms,
+        paymentTerms: tender.paymentMethod === 'CREDITO' ? tender.paymentTerms : 'CONTADO',
         deliveryTerms: dto.deliveryTerms,
+        vatIncludedAccepted: dto.vatIncludedAccepted,
         totalAmount: this.sumTotal(dto),
         items: {
           create: dto.items.map((item) => ({
             tenderItemId: item.tenderItemId,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            tax: item.tax,
+            tax: 0,
             total: item.total,
+            description: item.description,
+            brand: item.brand,
+            model: item.model,
             brandModel: item.brandModel,
+            pendingApproval: item.pendingApproval,
             notes: item.notes,
           })),
         },
@@ -169,6 +187,19 @@ export class BidsService {
     if (bid.status !== 'BORRADOR') {
       throw new ForbiddenException('Only draft bids can be submitted');
     }
+    const existingBid = await this.prisma.bid.findFirst({
+      where: {
+        tenderId: bid.tenderId,
+        supplierId,
+        deletedAt: null,
+        status: { in: ['ENVIADA', 'EVALUADA'] },
+        id: { not: bid.id },
+      },
+      select: { id: true },
+    });
+    if (existingBid) {
+      throw new BadRequestException('Ya presento una oferta para esta licitacion');
+    }
 
     return this.prisma.bid.update({
       where: { id },
@@ -181,74 +212,45 @@ export class BidsService {
     });
   }
 
-  async replace(id: string, dto: ReplaceBidDto, user: AuthenticatedUser) {
-    const supplierId = this.requireSupplier(user);
-    const oldBid = await this.prisma.bid.findFirst({
+  async remove(id: string) {
+    const bid = await this.prisma.bid.findFirst({
       where: { id, deletedAt: null },
-      include: { tender: true, supplier: true },
+      select: { id: true },
     });
-
-    if (!oldBid) {
+    if (!bid) {
       throw new NotFoundException('Bid not found');
     }
-    this.assertOwnBid(oldBid, supplierId);
-    this.assertSupplierCanBid(oldBid.supplier);
-    this.assertBidWindowOpen(oldBid.tender);
-    if (!oldBid.tender.allowBidReplacement) {
-      throw new ForbiddenException('Bid replacement is not allowed');
-    }
-    if (oldBid.status !== 'ENVIADA') {
-      throw new ForbiddenException('Only submitted bids can be replaced');
-    }
 
-    return this.prisma.$transaction(async (tx) => {
-      const replacement = await tx.bid.create({
-        data: {
-          tenderId: oldBid.tenderId,
-          supplierId,
-          userId: user.id,
-          version: oldBid.version + 1,
-          status: 'ENVIADA',
-          submittedAt: new Date(),
-          receiptCode: this.receiptCode(id),
-          validityDays: dto.validityDays,
-          paymentTerms: dto.paymentTerms,
-          deliveryTerms: dto.deliveryTerms,
-          totalAmount: this.sumTotal(dto),
-          items: {
-            create: dto.items.map((item) => ({
-              tenderItemId: item.tenderItemId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              tax: item.tax,
-              total: item.total,
-              brandModel: item.brandModel,
-              notes: item.notes,
-            })),
-          },
-          documents: {
-            create:
-              dto.documents?.map((document) => ({
-                fileId: document.fileId,
-                type: document.type,
-              })) ?? [],
-          },
-        },
-      });
-
-      await tx.bid.update({
-        where: { id },
-        data: {
-          status: 'REEMPLAZADA',
-          replacedById: replacement.id,
-        },
-      });
-
-      return tx.bid.findUniqueOrThrow({
-        where: { id: replacement.id },
-        include: this.bidIncludeForSupplier(),
-      });
+    const now = new Date();
+    return this.prisma.bid.update({
+      where: { id },
+      data: {
+        status: 'ANULADA',
+        voidedAt: now,
+        voidReason: 'Oferta eliminada por administrador',
+        deletedAt: now,
+      },
+      select: { id: true, tenderId: true, supplierId: true, deletedAt: true },
     });
+  }
+
+  private async validateBidItems(dto: CreateBidDto, tenderId: string) {
+    if (dto.items.length === 0) {
+      throw new BadRequestException('La oferta debe incluir al menos un item');
+    }
+    const linkedIds = [...new Set(dto.items.flatMap((item) => item.tenderItemId ? [item.tenderItemId] : []))];
+    if (linkedIds.length) {
+      const validCount = await this.prisma.tenderItem.count({
+        where: { id: { in: linkedIds }, tenderId, deletedAt: null },
+      });
+      if (validCount !== linkedIds.length) {
+        throw new BadRequestException('Uno o mas items no pertenecen a la licitacion seleccionada');
+      }
+    }
+    const invalidAdditional = dto.items.some((item) => !item.tenderItemId && (!item.pendingApproval || !item.description?.trim()));
+    if (invalidAdditional) {
+      throw new BadRequestException('Los items adicionales requieren descripcion y aceptacion de aprobacion pendiente');
+    }
   }
 
   private requireSupplier(user: AuthenticatedUser) {

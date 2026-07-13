@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { AuthenticatedUser } from '../common/auth/authenticated-user.interface';
 import { AuditAction } from '../common/decorators/audit-action.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Permissions } from '../common/decorators/permissions.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { CreateTenderDto } from './dto/create-tender.dto';
 import { CreateTenderItemDto } from './dto/create-tender-item.dto';
@@ -37,6 +38,14 @@ export class TendersController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateTenderDto) {
     return this.tendersService.update(id, dto);
+  }
+
+  @Roles('ADMIN')
+  @Permissions('tenders:update:internal')
+  @AuditAction({ action: 'TENDER_DELETE', entity: 'Tender' })
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.tendersService.remove(id);
   }
 
   @Permissions('tenders:publish:internal')

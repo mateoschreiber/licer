@@ -1,5 +1,9 @@
 import {
   Controller,
+  BadRequestException,
+  Post,
+  UploadedFile,
+  UseInterceptors,
   Get,
   NotFoundException,
   Param,
@@ -9,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { createReadStream, existsSync } from 'fs';
 import { Response } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthenticatedUser } from '../common/auth/authenticated-user.interface';
 import { RequestWithUser } from '../common/auth/request-with-user.interface';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -18,6 +23,17 @@ import { FilesService } from './files.service';
 @Controller('files')
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
+
+  @Permissions('tender-documents:create:internal', 'suppliers:update:own')
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }))
+  async upload(@UploadedFile() file: any, @CurrentUser() user: AuthenticatedUser) {
+    if (!file) throw new BadRequestException('Archivo requerido o superior a 2 MB');
+    if (file.size > 2 * 1024 * 1024) {
+      throw new BadRequestException('El archivo supera el limite maximo de 2 MB');
+    }
+    return this.filesService.storeUpload(file, user.id);
+  }
 
   @Permissions('files:download:own', 'files:download:internal')
   @Get(':id/download')

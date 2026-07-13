@@ -1,4 +1,4 @@
-import { FileText, HelpCircle, LogOut, Send, UserRound } from 'lucide-react';
+import { FileText, HelpCircle, LogOut, UserRound } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../shared/auth/AuthProvider';
 
@@ -27,9 +27,6 @@ export function SupplierLayout() {
           </NavLink>
           <NavLink to="/supplier/questions">
             <HelpCircle size={18} /> Consultas
-          </NavLink>
-          <NavLink to="/supplier/bids/new">
-            <Send size={18} /> Oferta
           </NavLink>
         </nav>
         <button className="nav-button" type="button" onClick={() => void logout()}>

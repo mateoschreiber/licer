@@ -1,6 +1,8 @@
 import { Type } from 'class-transformer';
 import {
+  Equals,
   IsArray,
+  IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
@@ -32,7 +34,23 @@ export class CreateBidItemDto {
 
   @IsOptional()
   @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  brand?: string;
+
+  @IsOptional()
+  @IsString()
+  model?: string;
+
+  @IsOptional()
+  @IsString()
   brandModel?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  pendingApproval = false;
 
   @IsOptional()
   @IsString()
@@ -63,6 +81,10 @@ export class CreateBidDto {
   @IsOptional()
   @IsString()
   deliveryTerms?: string;
+
+  @IsBoolean()
+  @Equals(true, { message: 'Debe aceptar que los precios incluyen IVA' })
+  vatIncludedAccepted!: boolean;
 
   @IsArray()
   @ValidateNested({ each: true })

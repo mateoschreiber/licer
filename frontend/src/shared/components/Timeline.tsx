@@ -1,3 +1,4 @@
+import { formatPyDateTime } from '../utils/format';
 interface TimelineItem {
   label: string;
   date?: string;
@@ -14,7 +15,7 @@ export function Timeline({ items }: TimelineProps) {
       {items.map((item) => (
         <li key={`${item.label}-${item.date ?? ''}`}>
           <strong>{item.label}</strong>
-          {item.date ? <span>{new Date(item.date).toLocaleString()}</span> : null}
+          {item.date ? <span>{formatPyDateTime(item.date)}</span> : null}
           {item.detail ? <p>{item.detail}</p> : null}
         </li>
       ))}

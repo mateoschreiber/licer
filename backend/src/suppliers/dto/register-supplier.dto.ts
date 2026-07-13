@@ -17,11 +17,31 @@ export class RegisterSupplierDto {
   @IsString()
   tradeName?: string;
 
-  @IsString()
-  contactName!: string;
-
   @IsEmail()
-  contactEmail!: string;
+  billingEmail!: string;
+
+  @IsString()
+  billingAddress!: string;
+
+  @IsOptional()
+  @IsString()
+  contactName?: string;
+
+  @IsOptional()
+  @IsEmail()
+  contactEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  legalRepresentative?: string;
+
+  @IsOptional()
+  @IsString()
+  relevantContacts?: string;
+
+  @IsOptional()
+  @IsString()
+  clientRelationshipDuration?: string;
   @IsString()
   @MinLength(3)
   username!: string;

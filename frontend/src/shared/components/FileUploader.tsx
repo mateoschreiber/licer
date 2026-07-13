@@ -9,7 +9,7 @@ export function FileUploader({ label, onFiles }: FileUploaderProps) {
   return (
     <label className="file-uploader">
       <Upload size={18} />
-      <span>{label}</span>
+      <span>{label} (max. 2 MB por archivo)</span>
       <input
         type="file"
         multiple

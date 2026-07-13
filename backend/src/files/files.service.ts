@@ -4,7 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { resolve } from 'path';
+import { resolve, join } from 'path';
+import { createHash, randomUUID } from 'crypto';
+import { mkdir, writeFile } from 'fs/promises';
 import { AuditService } from '../audit/audit.service';
 import { AuthenticatedUser } from '../common/auth/authenticated-user.interface';
 import { ROLES } from '../common/constants/roles';
@@ -31,6 +33,26 @@ export class FilesService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
   ) {}
+
+  async storeUpload(file: { originalname: string; mimetype: string; buffer: Buffer; size: number }, uploadedById: string) {
+    const storageRoot = process.env.STORAGE_PRIVATE_PATH ?? '/app/storage/private';
+    await mkdir(storageRoot, { recursive: true });
+    const id = randomUUID();
+    const storagePath = join(storageRoot, id);
+    await writeFile(storagePath, file.buffer);
+    const stored = await this.prisma.fileObject.create({
+      data: {
+        storagePath,
+        originalName: file.originalname,
+        mime: file.mimetype || 'application/octet-stream',
+        size: BigInt(file.size),
+        sha256: createHash('sha256').update(file.buffer).digest('hex'),
+        uploadedById,
+      },
+      select: { id: true, originalName: true, mime: true, size: true },
+    });
+    return { ...stored, size: Number(stored.size) };
+  }
 
   async prepareDownload(
     id: string,

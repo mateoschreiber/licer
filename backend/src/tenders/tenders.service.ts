@@ -99,6 +99,14 @@ export class TendersService {
     });
   }
 
+  async remove(id: string) {
+    await this.ensureTender(id);
+    return this.prisma.tender.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
   async publish(id: string) {
     await this.ensureTender(id);
     return this.prisma.tender.update({
@@ -128,6 +136,10 @@ export class TendersService {
         unit: dto.unit,
         quantity: dto.quantity,
         specs: dto.specs,
+        referenceBrandModel: dto.referenceBrandModel,
+        allowsEquivalent: dto.allowsEquivalent ?? false,
+        minimumWarranty: dto.minimumWarranty,
+        warrantyDocumentRequired: dto.warrantyDocumentRequired ?? false,
       },
     });
   }
@@ -160,6 +172,14 @@ export class TendersService {
       title: dto.title,
       description: dto.description,
       currency: dto.currency,
+      categoryId: dto.categoryId,
+      branchId: dto.branchId,
+      responsibleEmail: dto.responsibleEmail,
+      responseDeadline: dto.responseDeadline ? this.parseDate(dto.responseDeadline, 'Limite de respuestas invalido') : undefined,
+      vatIncluded: dto.vatIncluded,
+      paymentMethod: dto.paymentMethod,
+      paymentTerms: dto.paymentTerms,
+      offerValidityUntil: dto.offerValidityUntil ? this.parseDate(dto.offerValidityUntil, 'Validez invalida') : undefined,
       requesterArea: dto.requesterArea,
       allowBidReplacement: dto.allowBidReplacement,
       buyerId,
@@ -237,23 +257,12 @@ export class TendersService {
 
   private async generateTenderCode(): Promise<string> {
     const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
-    const datePrefix = `PK-${day}${month}${year}`;
-
+    const yearPrefix = String(now.getFullYear()).slice(-3);
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-
-    const countToday = await this.prisma.tender.count({
-      where: {
-        code: { startsWith: datePrefix },
-        createdAt: { gte: todayStart, lt: todayEnd },
-      },
-    });
-
+    const countToday = await this.prisma.tender.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } });
     const suffix = String(countToday + 1).padStart(3, '0');
-    return `${datePrefix}-${suffix}`;
+    return yearPrefix + '-' + suffix;
   }
 
   private supplierTenderSelect() {
@@ -264,6 +273,15 @@ export class TendersService {
       description: true,
       status: true,
       currency: true,
+      category: { select: { id: true, name: true } },
+      branch: { select: { id: true, name: true } },
+      requestingArea: { select: { id: true, code: true, name: true } },
+      responsibleEmail: true,
+      responseDeadline: true,
+      vatIncluded: true,
+      paymentMethod: true,
+      paymentTerms: true,
+      allowBidReplacement: true,
       publishedAt: true,
       questionDeadline: true,
       bidDeadline: true,
@@ -271,9 +289,10 @@ export class TendersService {
         where: { deletedAt: null },
       },
       documents: {
-        where: { voidedAt: null, publishedAt: { not: null } },
+        where: { voidedAt: null },
         select: {
           id: true,
+          fileId: true,
           type: true,
           version: true,
           title: true,
@@ -294,6 +313,16 @@ export class TendersService {
       buyerId: true,
       requestingAreaId: true,
       requesterArea: true,
+      categoryId: true,
+      category: { select: { id: true, name: true } },
+      branchId: true,
+      branch: { select: { id: true, name: true } },
+      responsibleEmail: true,
+      responseDeadline: true,
+      vatIncluded: true,
+      paymentMethod: true,
+      paymentTerms: true,
+      offerValidityUntil: true,
       requestingArea: { select: { id: true, code: true, name: true, status: true } },
       allowBidReplacement: true,
       publishedAt: true,
