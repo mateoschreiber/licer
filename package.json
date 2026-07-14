@@ -9,7 +9,8 @@
     "build": "pnpm --filter @licer/backend build && pnpm --filter @licer/frontend build",
     "test": "pnpm --filter @licer/backend test",
     "format": "prettier --write --ignore-unknown .",
-    "format:check": "prettier --check --ignore-unknown ."
+    "format:check": "prettier --check --ignore-unknown .",
+    "ux:check": "node scripts/verify-ux.mjs"
   },
   "devDependencies": {
     "prettier": "3.5.3"

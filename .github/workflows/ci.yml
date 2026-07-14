@@ -22,5 +22,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @licer/backend prisma:generate
       - run: pnpm format:check
+      - run: pnpm ux:check
       - run: pnpm build
       - run: pnpm test
