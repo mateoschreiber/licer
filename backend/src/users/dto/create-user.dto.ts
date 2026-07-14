@@ -1,12 +1,4 @@
-import {
-  IsArray,
-  IsEmail,
-  IsEnum,
-  IsOptional,
-  IsString,
-  IsUUID,
-  MinLength,
-} from 'class-validator';
+import { IsArray, IsEmail, IsEnum, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
 import { UserStatus } from '@prisma/client';
 
 export class CreateUserDto {

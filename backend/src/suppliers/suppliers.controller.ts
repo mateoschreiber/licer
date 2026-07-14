@@ -18,82 +18,167 @@ export class SuppliersController {
 
   @Public()
   @Post('register')
-  register(@Body() dto: RegisterSupplierDto) { return this.suppliersService.register(dto); }
+  register(@Body() dto: RegisterSupplierDto) {
+    return this.suppliersService.register(dto);
+  }
 
   @Permissions('suppliers:read:own')
   @Get('me')
-  findMine(@CurrentUser() user: AuthenticatedUser) { return this.suppliersService.findMine(user); }
+  findMine(@CurrentUser() user: AuthenticatedUser) {
+    return this.suppliersService.findMine(user);
+  }
 
   @Permissions('suppliers:update:own')
   @Patch('me')
-  updateMine(@Body() dto: UpdateSupplierDto, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.update(user.supplierId ?? '', dto, user); }
+  updateMine(@Body() dto: UpdateSupplierDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.suppliersService.update(user.supplierId ?? '', dto, user);
+  }
 
   @Permissions('suppliers:read:own')
   @Get('me/users')
-  findMyUsers(@CurrentUser() user: AuthenticatedUser) { return this.suppliersService.findMyUsers(user); }
+  findMyUsers(@CurrentUser() user: AuthenticatedUser) {
+    return this.suppliersService.findMyUsers(user);
+  }
 
   @Permissions('suppliers:update:own')
   @Post('me/users')
-  createMyUser(@Body() dto: { firstName: string; lastName: string; phone?: string; phoneCountry?: string; title?: string }, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.createMyUser(dto, user); }
+  createMyUser(
+    @Body()
+    dto: {
+      firstName: string;
+      lastName: string;
+      phone?: string;
+      phoneCountry?: string;
+      title?: string;
+    },
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.suppliersService.createMyUser(dto, user);
+  }
 
   @Permissions('suppliers:update:own')
   @Patch('me/users/:userId')
-  updateMyUser(@Param('userId') userId: string, @Body() dto: { firstName?: string; lastName?: string; phone?: string; phoneCountry?: string; title?: string }, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.updateMyUser(userId, dto, user); }
+  updateMyUser(
+    @Param('userId') userId: string,
+    @Body()
+    dto: {
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      phoneCountry?: string;
+      title?: string;
+    },
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.suppliersService.updateMyUser(userId, dto, user);
+  }
 
   @Permissions('suppliers:update:own')
   @Delete('me/users/:userId')
-  deleteMyUser(@Param('userId') userId: string, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.deleteMyUser(userId, user); }
+  deleteMyUser(@Param('userId') userId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.suppliersService.deleteMyUser(userId, user);
+  }
 
   @Permissions('suppliers:update:own')
   @Post('me/documents')
-  addOwnDocument(@Body() dto: CreateSupplierDocumentDto, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.addOwnDocument(dto, user); }
+  addOwnDocument(@Body() dto: CreateSupplierDocumentDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.suppliersService.addOwnDocument(dto, user);
+  }
 
   @Permissions('suppliers:update:own')
   @Delete('me/documents/:documentId')
-  deleteOwnDocument(@Param('documentId') documentId: string, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.deleteDocument(documentId, user.supplierId ?? '', user); }
+  deleteOwnDocument(
+    @Param('documentId') documentId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.suppliersService.deleteDocument(documentId, user.supplierId ?? '', user);
+  }
 
   @Permissions('suppliers:read:internal')
   @Get()
-  findAll(@Query() query: PaginationDto) { return this.suppliersService.findAll(query); }
+  findAll(@Query() query: PaginationDto) {
+    return this.suppliersService.findAll(query);
+  }
 
   @Permissions('suppliers:read:internal')
   @Get(':id')
-  findOne(@Param('id') id: string) { return this.suppliersService.findOne(id); }
+  findOne(@Param('id') id: string) {
+    return this.suppliersService.findOne(id);
+  }
 
   @Roles('ADMIN')
   @Permissions('suppliers:update:internal')
   @AuditAction({ action: 'SUPPLIER_UPDATE', entity: 'Supplier' })
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateSupplierDto, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.update(id, dto, user); }
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateSupplierDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.suppliersService.update(id, dto, user);
+  }
 
   @Roles('ADMIN')
   @Permissions('suppliers:update:internal')
   @Patch(':id/documents/:documentId')
-  updateDocument(@Param('id') id: string, @Param('documentId') documentId: string, @Body() dto: { status: string }, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.updateDocument(documentId, id, dto.status, user); }
+  updateDocument(
+    @Param('id') id: string,
+    @Param('documentId') documentId: string,
+    @Body() dto: { status: string },
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.suppliersService.updateDocument(documentId, id, dto.status, user);
+  }
 
   @Roles('ADMIN')
   @Permissions('suppliers:update:internal')
   @Delete(':id/documents/:documentId')
-  deleteDocument(@Param('id') id: string, @Param('documentId') documentId: string, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.deleteDocument(documentId, id, user); }
+  deleteDocument(
+    @Param('id') id: string,
+    @Param('documentId') documentId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.suppliersService.deleteDocument(documentId, id, user);
+  }
 
   @Roles('ADMIN')
   @Permissions('suppliers:update:internal')
   @Delete(':id')
-  delete(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.delete(id, user); }
+  delete(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.suppliersService.delete(id, user);
+  }
 
   @Roles('ADMIN')
   @Permissions('suppliers:update:internal')
   @AuditAction({ action: 'SUPPLIER_DOCUMENT_CREATE', entity: 'SupplierDocument' })
   @Post(':id/documents')
-  addDocument(@Param('id') id: string, @Body() dto: CreateSupplierDocumentDto, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.addDocument(id, dto, user); }
+  addDocument(
+    @Param('id') id: string,
+    @Body() dto: CreateSupplierDocumentDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.suppliersService.addDocument(id, dto, user);
+  }
 
   @Roles('ADMIN')
   @Permissions('suppliers:approve:internal')
   @Post(':id/approve')
-  approve(@Param('id') id: string, @Body() dto: SupplierActionDto, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.approve(id, dto, user); }
+  approve(
+    @Param('id') id: string,
+    @Body() dto: SupplierActionDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.suppliersService.approve(id, dto, user);
+  }
 
   @Roles('ADMIN')
   @Permissions('suppliers:block:internal')
   @Post(':id/block')
-  block(@Param('id') id: string, @Body() dto: SupplierActionDto, @CurrentUser() user: AuthenticatedUser) { return this.suppliersService.block(id, dto, user); }
+  block(
+    @Param('id') id: string,
+    @Body() dto: SupplierActionDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.suppliersService.block(id, dto, user);
+  }
 }

@@ -25,12 +25,15 @@ describe('TendersService date defaults', () => {
     };
     const service = createService(prisma);
 
-    const tender = await service.create({
-      code: 'LIC-001',
-      title: 'Compra equipos',
-      description: 'Compra de equipos',
-      publishedAt: '2026-07-02T10:00:00.000Z',
-    }, adminUser);
+    const tender = await service.create(
+      {
+        code: 'LIC-001',
+        title: 'Compra equipos',
+        description: 'Compra de equipos',
+        publishedAt: '2026-07-02T10:00:00.000Z',
+      },
+      adminUser,
+    );
 
     expect(tender.questionDeadline?.toISOString()).toBe('2026-07-18T02:59:59.999Z');
     expect(tender.bidDeadline.toISOString()).toBe('2026-08-02T02:59:59.999Z');
@@ -39,13 +42,18 @@ describe('TendersService date defaults', () => {
   it('rejects bid deadlines before consultation deadlines', async () => {
     const service = createService({ tender: { create: jest.fn() } });
 
-    await expect(service.create({
-      code: 'LIC-002',
-      title: 'Compra equipos',
-      description: 'Compra de equipos',
-      publishedAt: '2026-07-02T10:00:00.000Z',
-      questionDeadline: '2026-07-20T10:00:00.000Z',
-      bidDeadline: '2026-07-10T10:00:00.000Z',
-    }, adminUser)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.create(
+        {
+          code: 'LIC-002',
+          title: 'Compra equipos',
+          description: 'Compra de equipos',
+          publishedAt: '2026-07-02T10:00:00.000Z',
+          questionDeadline: '2026-07-20T10:00:00.000Z',
+          bidDeadline: '2026-07-10T10:00:00.000Z',
+        },
+        adminUser,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

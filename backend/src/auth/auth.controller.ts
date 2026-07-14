@@ -1,10 +1,4 @@
-import {
-  Body,
-  Controller,
-  Post,
-  Req,
-  Res,
-} from '@nestjs/common';
+import { Body, Controller, Post, Req, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
@@ -13,10 +7,7 @@ import { RequestWithUser } from '../common/auth/request-with-user.interface';
 import { AuthenticatedUser } from '../common/auth/authenticated-user.interface';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import {
-  ResetPasswordConfirmDto,
-  ResetPasswordRequestDto,
-} from './dto/reset-password.dto';
+import { ResetPasswordConfirmDto, ResetPasswordRequestDto } from './dto/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -39,10 +30,7 @@ export class AuthController {
 
   @Permissions('auth:logout:own')
   @Post('logout')
-  logout(
-    @CurrentUser() user: AuthenticatedUser,
-    @Res({ passthrough: true }) response: Response,
-  ) {
+  logout(@CurrentUser() user: AuthenticatedUser, @Res({ passthrough: true }) response: Response) {
     return this.authService.logout(response, user);
   }
 

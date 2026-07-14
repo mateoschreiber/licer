@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -38,8 +35,7 @@ export class AuthService {
       },
     });
 
-    const passwordValid =
-      user && (await bcrypt.compare(dto.password, user.passwordHash));
+    const passwordValid = user && (await bcrypt.compare(dto.password, user.passwordHash));
 
     if (!user || !passwordValid || user.status !== 'ACTIVE') {
       await this.auditService.log({
@@ -57,9 +53,7 @@ export class AuthService {
     const permissions = [
       ...new Set(
         user.roles.flatMap((userRole) =>
-          userRole.role.permissions.map(
-            (rolePermission) => rolePermission.permission.code,
-          ),
+          userRole.role.permissions.map((rolePermission) => rolePermission.permission.code),
         ),
       ),
     ];
@@ -86,11 +80,8 @@ export class AuthService {
     return {
       accessToken: await this.jwtService.signAsync(payload),
       refreshToken: await this.jwtService.signAsync(payload, {
-        secret:
-          this.configService.get<string>('JWT_REFRESH_SECRET') ??
-          'change-me-refresh-secret',
-        expiresIn:
-          this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d',
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET') ?? 'change-me-refresh-secret',
+        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d',
       }),
       user: {
         id: user.id,
@@ -137,14 +128,9 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token required');
     }
 
-    const payload = await this.jwtService.verifyAsync<{ sub: string }>(
-      refreshToken,
-      {
-        secret:
-          this.configService.get<string>('JWT_REFRESH_SECRET') ??
-          'change-me-refresh-secret',
-      },
-    );
+    const payload = await this.jwtService.verifyAsync<{ sub: string }>(refreshToken, {
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET') ?? 'change-me-refresh-secret',
+    });
 
     const user = await this.prisma.user.findFirst({
       where: { id: payload.sub, deletedAt: null, status: 'ACTIVE' },
@@ -171,9 +157,7 @@ export class AuthService {
     const permissions = [
       ...new Set(
         user.roles.flatMap((userRole) =>
-          userRole.role.permissions.map(
-            (rolePermission) => rolePermission.permission.code,
-          ),
+          userRole.role.permissions.map((rolePermission) => rolePermission.permission.code),
         ),
       ),
     ];

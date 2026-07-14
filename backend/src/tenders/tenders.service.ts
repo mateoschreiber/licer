@@ -8,11 +8,7 @@ import { CreateTenderDto } from './dto/create-tender.dto';
 import { CreateTenderItemDto } from './dto/create-tender-item.dto';
 import { UpdateTenderDto } from './dto/update-tender.dto';
 
-const supplierVisibleStatuses = [
-  'PUBLICADA',
-  'CONSULTAS_CERRADAS',
-  'RECEPCION',
-] as const;
+const supplierVisibleStatuses = ['PUBLICADA', 'CONSULTAS_CERRADAS', 'RECEPCION'] as const;
 
 @Injectable()
 export class TendersService {
@@ -23,9 +19,7 @@ export class TendersService {
     const supplierView = user.roles.includes(ROLES.PROVEEDOR);
     const where: Prisma.TenderWhereInput = {
       deletedAt: null,
-      ...(supplierView
-        ? { status: { in: [...supplierVisibleStatuses] } }
-        : {}),
+      ...(supplierView ? { status: { in: [...supplierVisibleStatuses] } } : {}),
       ...(query.search
         ? {
             OR: [
@@ -51,9 +45,7 @@ export class TendersService {
       where: {
         id,
         deletedAt: null,
-        ...(supplierView
-          ? { status: { in: [...supplierVisibleStatuses] } }
-          : {}),
+        ...(supplierView ? { status: { in: [...supplierVisibleStatuses] } } : {}),
       },
       select: supplierView ? this.supplierTenderSelect() : this.internalTenderSelect(),
     });
@@ -67,7 +59,7 @@ export class TendersService {
 
   async create(dto: CreateTenderDto, user: AuthenticatedUser) {
     const dates = this.resolveTenderDates(dto);
-    const code = dto.code ?? await this.generateTenderCode();
+    const code = dto.code ?? (await this.generateTenderCode());
     const data = this.toTenderData(dto, user.id) as Prisma.TenderUncheckedCreateInput;
     return this.prisma.tender.create({
       data: {
@@ -89,9 +81,15 @@ export class TendersService {
     });
     const data = this.toTenderData(dto) as Prisma.TenderUncheckedUpdateInput;
     this.assertDateOrder({
-      baseDate: dto.publishedAt ? this.parseDate(dto.publishedAt, 'Fecha base invalida') : (tender.publishedAt ?? tender.createdAt),
-      questionDeadline: dto.questionDeadline ? this.parseDate(dto.questionDeadline, 'Limite de consultas invalido') : tender.questionDeadline,
-      bidDeadline: dto.bidDeadline ? this.parseDate(dto.bidDeadline, 'Limite de ofertas invalido') : tender.bidDeadline,
+      baseDate: dto.publishedAt
+        ? this.parseDate(dto.publishedAt, 'Fecha base invalida')
+        : (tender.publishedAt ?? tender.createdAt),
+      questionDeadline: dto.questionDeadline
+        ? this.parseDate(dto.questionDeadline, 'Limite de consultas invalido')
+        : tender.questionDeadline,
+      bidDeadline: dto.bidDeadline
+        ? this.parseDate(dto.bidDeadline, 'Limite de ofertas invalido')
+        : tender.bidDeadline,
     });
     return this.prisma.tender.update({
       where: { id },
@@ -175,11 +173,15 @@ export class TendersService {
       categoryId: dto.categoryId,
       branchId: dto.branchId,
       responsibleEmail: dto.responsibleEmail,
-      responseDeadline: dto.responseDeadline ? this.parseDate(dto.responseDeadline, 'Limite de respuestas invalido') : undefined,
+      responseDeadline: dto.responseDeadline
+        ? this.parseDate(dto.responseDeadline, 'Limite de respuestas invalido')
+        : undefined,
       vatIncluded: dto.vatIncluded,
       paymentMethod: dto.paymentMethod,
       paymentTerms: dto.paymentTerms,
-      offerValidityUntil: dto.offerValidityUntil ? this.parseDate(dto.offerValidityUntil, 'Validez invalida') : undefined,
+      offerValidityUntil: dto.offerValidityUntil
+        ? this.parseDate(dto.offerValidityUntil, 'Validez invalida')
+        : undefined,
       requesterArea: dto.requesterArea,
       allowBidReplacement: dto.allowBidReplacement,
       buyerId,
@@ -238,7 +240,9 @@ export class TendersService {
       throw new BadRequestException('El limite de consultas no puede ser anterior a la fecha base');
     }
     if (dates.questionDeadline && dates.bidDeadline < dates.questionDeadline) {
-      throw new BadRequestException('El limite de ofertas no puede ser anterior al limite de consultas');
+      throw new BadRequestException(
+        'El limite de ofertas no puede ser anterior al limite de consultas',
+      );
     }
     if (!dates.questionDeadline && dates.bidDeadline < dates.baseDate) {
       throw new BadRequestException('El limite de ofertas no puede ser anterior a la fecha base');
@@ -260,7 +264,9 @@ export class TendersService {
     const yearPrefix = String(now.getFullYear()).slice(-3);
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-    const countToday = await this.prisma.tender.count({ where: { createdAt: { gte: todayStart, lt: todayEnd } } });
+    const countToday = await this.prisma.tender.count({
+      where: { createdAt: { gte: todayStart, lt: todayEnd } },
+    });
     const suffix = String(countToday + 1).padStart(3, '0');
     return yearPrefix + '-' + suffix;
   }

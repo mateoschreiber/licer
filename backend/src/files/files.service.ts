@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { resolve, join } from 'path';
 import { createHash, randomUUID } from 'crypto';
@@ -34,7 +30,10 @@ export class FilesService {
     private readonly auditService: AuditService,
   ) {}
 
-  async storeUpload(file: { originalname: string; mimetype: string; buffer: Buffer; size: number }, uploadedById: string) {
+  async storeUpload(
+    file: { originalname: string; mimetype: string; buffer: Buffer; size: number },
+    uploadedById: string,
+  ) {
     const storageRoot = process.env.STORAGE_PRIVATE_PATH ?? '/app/storage/private';
     await mkdir(storageRoot, { recursive: true });
     const id = randomUUID();
@@ -126,16 +125,13 @@ export class FilesService {
         (document) => document.supplierId === user.supplierId && !document.voidedAt,
       ) ||
       file.bidDocuments.some(
-        (document) =>
-          document.bid.supplierId === user.supplierId && !document.voidedAt,
+        (document) => document.bid.supplierId === user.supplierId && !document.voidedAt,
       ) ||
       file.tenderDocuments.some(
         (document) =>
           !document.voidedAt &&
           Boolean(document.publishedAt) &&
-          ['PUBLICADA', 'CONSULTAS_CERRADAS', 'RECEPCION'].includes(
-            document.tender.status,
-          ),
+          ['PUBLICADA', 'CONSULTAS_CERRADAS', 'RECEPCION'].includes(document.tender.status),
       )
     );
   }

@@ -64,10 +64,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [user],
   );
 
-  const value = useMemo(
-    () => ({ user, login, logout, hasRole }),
-    [user, login, logout, hasRole],
-  );
+  const value = useMemo(() => ({ user, login, logout, hasRole }), [user, login, logout, hasRole]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

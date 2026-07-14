@@ -35,12 +35,15 @@ export function TenderSelector({
   const matches = useMemo(() => {
     const term = text.trim().toLowerCase();
     if (!term) return [];
-    return data.filter((tender) =>
-      tender.id.toLowerCase().includes(term) ||
-      tender.code.toLowerCase().includes(term) ||
-      displayTenderCode(tender.code).toLowerCase().includes(term) ||
-      tender.title.toLowerCase().includes(term)
-    ).slice(0, 10);
+    return data
+      .filter(
+        (tender) =>
+          tender.id.toLowerCase().includes(term) ||
+          tender.code.toLowerCase().includes(term) ||
+          displayTenderCode(tender.code).toLowerCase().includes(term) ||
+          tender.title.toLowerCase().includes(term),
+      )
+      .slice(0, 10);
   }, [data, text]);
 
   function select(tender: TenderSummary) {
@@ -75,7 +78,13 @@ export function TenderSelector({
           <ul className="autocomplete-menu">
             {matches.map((tender) => (
               <li key={tender.id}>
-                <button type="button" onMouseDown={(event) => { event.preventDefault(); select(tender); }}>
+                <button
+                  type="button"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    select(tender);
+                  }}
+                >
                   <strong>{displayTenderCode(tender.code)}</strong> - {tender.title}
                 </button>
               </li>

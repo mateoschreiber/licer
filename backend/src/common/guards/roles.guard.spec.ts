@@ -15,9 +15,7 @@ function createContext(roles: string[]): ExecutionContext {
 describe('RolesGuard', () => {
   it('allows ADMIN even when the route asks for another internal role', () => {
     const reflector = {
-      getAllAndOverride: jest.fn()
-        .mockReturnValueOnce(false)
-        .mockReturnValueOnce(['COMPRAS']),
+      getAllAndOverride: jest.fn().mockReturnValueOnce(false).mockReturnValueOnce(['COMPRAS']),
     } as unknown as Reflector;
     const guard = new RolesGuard(reflector);
 

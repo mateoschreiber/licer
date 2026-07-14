@@ -38,7 +38,12 @@ export class SuppliersService {
           contactEmail: dto.contactEmail ?? dto.billingEmail,
           billingEmail: dto.billingEmail,
           billingAddress: dto.billingAddress,
-          legalRepresentative: dto.legalRepresentative ?? ([dto.legalRepresentativeFirstName, dto.legalRepresentativeLastName].filter(Boolean).join(' ') || undefined),
+          legalRepresentative:
+            dto.legalRepresentative ??
+            ([dto.legalRepresentativeFirstName, dto.legalRepresentativeLastName]
+              .filter(Boolean)
+              .join(' ') ||
+              undefined),
           legalRepresentativeFirstName: dto.legalRepresentativeFirstName,
           legalRepresentativeLastName: dto.legalRepresentativeLastName,
           legalRepresentativeDocumentId: dto.legalRepresentativeDocumentId,
@@ -56,12 +61,16 @@ export class SuppliersService {
         data: {
           email: dto.contactEmail ?? dto.billingEmail,
           username: dto.username,
-          name: dto.contactName ?? dto.legalRepresentative ?? ([dto.legalRepresentativeFirstName, dto.legalRepresentativeLastName].filter(Boolean).join(' ') || dto.legalName),
+          name:
+            dto.contactName ??
+            dto.legalRepresentative ??
+            ([dto.legalRepresentativeFirstName, dto.legalRepresentativeLastName]
+              .filter(Boolean)
+              .join(' ') ||
+              dto.legalName),
           passwordHash,
           supplierId: supplier.id,
-          roles: providerRole
-            ? { create: [{ roleId: providerRole.id }] }
-            : undefined,
+          roles: providerRole ? { create: [{ roleId: providerRole.id }] } : undefined,
         },
       });
 
@@ -124,49 +133,118 @@ export class SuppliersService {
   async update(id: string, dto: UpdateSupplierDto, user: AuthenticatedUser) {
     const own = user.roles.includes('PROVEEDOR');
     const targetId = own ? user.supplierId : id;
-    if (!targetId || (own && targetId !== id)) throw new ForbiddenException('Supplier ownership mismatch');
-    const existing = await this.prisma.supplier.findFirst({ where: { id: targetId, deletedAt: null } });
+    if (!targetId || (own && targetId !== id))
+      throw new ForbiddenException('Supplier ownership mismatch');
+    const existing = await this.prisma.supplier.findFirst({
+      where: { id: targetId, deletedAt: null },
+    });
     if (!existing) throw new NotFoundException('Supplier not found');
     const data = { ...dto };
     if ('legalRepresentativeFirstName' in dto || 'legalRepresentativeLastName' in dto) {
-      data.legalRepresentative = ([dto.legalRepresentativeFirstName ?? existing.legalRepresentativeFirstName, dto.legalRepresentativeLastName ?? existing.legalRepresentativeLastName].filter(Boolean).join(' ') || undefined);
+      data.legalRepresentative =
+        [
+          dto.legalRepresentativeFirstName ?? existing.legalRepresentativeFirstName,
+          dto.legalRepresentativeLastName ?? existing.legalRepresentativeLastName,
+        ]
+          .filter(Boolean)
+          .join(' ') || undefined;
     }
     if (own) delete data.status;
     return this.prisma.supplier.update({ where: { id: targetId }, data });
   }
 
   async findMyUsers(user: AuthenticatedUser) {
-    return this.prisma.supplierStaff.findMany({ where: { supplierId: this.requireSupplierId(user), deletedAt: null }, orderBy: { createdAt: 'asc' } });
+    return this.prisma.supplierStaff.findMany({
+      where: { supplierId: this.requireSupplierId(user), deletedAt: null },
+      orderBy: { createdAt: 'asc' },
+    });
   }
 
-  async createMyUser(dto: { firstName: string; lastName: string; phone?: string; phoneCountry?: string; title?: string }, user: AuthenticatedUser) {
-    return this.prisma.supplierStaff.create({ data: { supplierId: this.requireSupplierId(user), firstName: dto.firstName, lastName: dto.lastName, phone: dto.phone, phoneCountry: dto.phoneCountry, title: dto.title } });
+  async createMyUser(
+    dto: {
+      firstName: string;
+      lastName: string;
+      phone?: string;
+      phoneCountry?: string;
+      title?: string;
+    },
+    user: AuthenticatedUser,
+  ) {
+    return this.prisma.supplierStaff.create({
+      data: {
+        supplierId: this.requireSupplierId(user),
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        phone: dto.phone,
+        phoneCountry: dto.phoneCountry,
+        title: dto.title,
+      },
+    });
   }
 
-  async updateMyUser(id: string, dto: { firstName?: string; lastName?: string; phone?: string; phoneCountry?: string; title?: string }, user: AuthenticatedUser) {
+  async updateMyUser(
+    id: string,
+    dto: {
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      phoneCountry?: string;
+      title?: string;
+    },
+    user: AuthenticatedUser,
+  ) {
     const staff = await this.findOwnedStaff(id, user);
     return this.prisma.supplierStaff.update({ where: { id: staff.id }, data: dto });
   }
 
   async deleteMyUser(id: string, user: AuthenticatedUser) {
     const staff = await this.findOwnedStaff(id, user);
-    return this.prisma.supplierStaff.update({ where: { id: staff.id }, data: { deletedAt: new Date() } });
+    return this.prisma.supplierStaff.update({
+      where: { id: staff.id },
+      data: { deletedAt: new Date() },
+    });
   }
 
   async updateDocument(id: string, supplierId: string, status: string, user: AuthenticatedUser) {
     await this.findDocument(id, supplierId);
-    const document = await this.prisma.supplierDocument.update({ where: { id }, data: { status: status as never }, include: { file: { select: { id: true, originalName: true, mime: true } } } });
-    await this.auditService.log({ actorId: user.id, role: user.roles[0], action: 'SUPPLIER_DOCUMENT_UPDATE', entity: 'SupplierDocument', entityId: id, result: 'ALLOWED', metadata: { supplierId, status } });
+    const document = await this.prisma.supplierDocument.update({
+      where: { id },
+      data: { status: status as never },
+      include: { file: { select: { id: true, originalName: true, mime: true } } },
+    });
+    await this.auditService.log({
+      actorId: user.id,
+      role: user.roles[0],
+      action: 'SUPPLIER_DOCUMENT_UPDATE',
+      entity: 'SupplierDocument',
+      entityId: id,
+      result: 'ALLOWED',
+      metadata: { supplierId, status },
+    });
     return document;
   }
 
   async deleteDocument(id: string, supplierId: string, user: AuthenticatedUser) {
     const document = await this.findDocument(id, supplierId);
     await this.prisma.$transaction(async (tx) => {
-      await tx.supplierDocument.update({ where: { id }, data: { deletedAt: new Date(), voidedAt: new Date() } });
-      await tx.fileObject.update({ where: { id: document.fileId }, data: { deletedAt: new Date() } });
+      await tx.supplierDocument.update({
+        where: { id },
+        data: { deletedAt: new Date(), voidedAt: new Date() },
+      });
+      await tx.fileObject.update({
+        where: { id: document.fileId },
+        data: { deletedAt: new Date() },
+      });
     });
-    await this.auditService.log({ actorId: user.id, role: user.roles[0], action: 'SUPPLIER_DOCUMENT_DELETE', entity: 'SupplierDocument', entityId: id, result: 'ALLOWED', metadata: { supplierId } });
+    await this.auditService.log({
+      actorId: user.id,
+      role: user.roles[0],
+      action: 'SUPPLIER_DOCUMENT_DELETE',
+      entity: 'SupplierDocument',
+      entityId: id,
+      result: 'ALLOWED',
+      metadata: { supplierId },
+    });
   }
 
   async delete(id: string, user: AuthenticatedUser) {
@@ -174,9 +252,19 @@ export class SuppliersService {
     const deletedAt = new Date();
     await this.prisma.$transaction(async (tx) => {
       await tx.supplier.update({ where: { id }, data: { deletedAt } });
-      await tx.user.updateMany({ where: { supplierId: id, deletedAt: null }, data: { status: 'BLOCKED', deletedAt } });
+      await tx.user.updateMany({
+        where: { supplierId: id, deletedAt: null },
+        data: { status: 'BLOCKED', deletedAt },
+      });
     });
-    await this.auditService.log({ actorId: user.id, role: user.roles[0], action: 'SUPPLIER_DELETE', entity: 'Supplier', entityId: id, result: 'ALLOWED' });
+    await this.auditService.log({
+      actorId: user.id,
+      role: user.roles[0],
+      action: 'SUPPLIER_DELETE',
+      entity: 'Supplier',
+      entityId: id,
+      result: 'ALLOWED',
+    });
   }
 
   async addOwnDocument(dto: CreateSupplierDocumentDto, user: AuthenticatedUser) {
@@ -217,11 +305,7 @@ export class SuppliersService {
     return document;
   }
 
-  async addDocument(
-    supplierId: string,
-    dto: CreateSupplierDocumentDto,
-    user: AuthenticatedUser,
-  ) {
+  async addDocument(supplierId: string, dto: CreateSupplierDocumentDto, user: AuthenticatedUser) {
     if (!user.roles.includes('ADMIN')) {
       throw new ForbiddenException('Solo el administrador puede agregar documentos');
     }
@@ -258,22 +342,27 @@ export class SuppliersService {
   }
 
   private requireSupplierId(user: AuthenticatedUser) {
-    if (!user.supplierId || !user.roles.includes('PROVEEDOR')) throw new ForbiddenException('Supplier user required');
+    if (!user.supplierId || !user.roles.includes('PROVEEDOR'))
+      throw new ForbiddenException('Supplier user required');
     return user.supplierId;
   }
 
   private async findOwnedStaff(id: string, user: AuthenticatedUser) {
-    const staff = await this.prisma.supplierStaff.findFirst({ where: { id, supplierId: this.requireSupplierId(user), deletedAt: null } });
+    const staff = await this.prisma.supplierStaff.findFirst({
+      where: { id, supplierId: this.requireSupplierId(user), deletedAt: null },
+    });
     if (!staff) throw new NotFoundException('Supplier staff member not found');
     return staff;
   }
 
   private async findDocument(id: string, supplierId: string) {
-    const document = await this.prisma.supplierDocument.findFirst({ where: { id, supplierId, deletedAt: null, voidedAt: null }, include: { file: true } });
+    const document = await this.prisma.supplierDocument.findFirst({
+      where: { id, supplierId, deletedAt: null, voidedAt: null },
+      include: { file: true },
+    });
     if (!document) throw new NotFoundException('Supplier document not found');
     return document;
   }
-
 
   async approve(id: string, dto: SupplierActionDto, user: AuthenticatedUser) {
     const supplier = await this.prisma.supplier.update({

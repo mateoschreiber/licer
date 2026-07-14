@@ -49,5 +49,4 @@ export class BidsController {
   submit(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.bidsService.submit(id, user);
   }
-
 }

@@ -12,10 +12,7 @@ function getToken() {
   return window.localStorage.getItem('access_token');
 }
 
-export async function apiRequest<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers = new Headers(options.headers);
 
@@ -38,13 +35,14 @@ export async function apiRequest<T>(
     : await response.text();
 
   if (!response.ok) {
-    const message = typeof payload === 'object' && payload !== null && 'message' in payload
-      ? Array.isArray(payload.message)
-        ? payload.message.join('. ')
-        : String(payload.message)
-      : response.status === 413
-        ? 'El archivo supera el limite maximo de 2 MB.'
-        : 'No se pudo completar la solicitud.';
+    const message =
+      typeof payload === 'object' && payload !== null && 'message' in payload
+        ? Array.isArray(payload.message)
+          ? payload.message.join('. ')
+          : String(payload.message)
+        : response.status === 413
+          ? 'El archivo supera el limite maximo de 2 MB.'
+          : 'No se pudo completar la solicitud.';
     throw new ApiError(message, response.status, payload);
   }
 
@@ -63,8 +61,7 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
-  delete: <T>(path: string) =>
-    apiRequest<T>(path, { method: 'DELETE' }),
+  delete: <T>(path: string) => apiRequest<T>(path, { method: 'DELETE' }),
 };
 
 export async function previewFile(path: string) {
@@ -73,7 +70,8 @@ export async function previewFile(path: string) {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     credentials: 'include',
   });
-  if (!response.ok) throw new ApiError('File preview failed', response.status, await response.text());
+  if (!response.ok)
+    throw new ApiError('File preview failed', response.status, await response.text());
   const url = URL.createObjectURL(await response.blob());
   const windowRef = window.open(url, '_blank', 'noopener');
   if (!windowRef) URL.revokeObjectURL(url);

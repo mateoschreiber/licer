@@ -13,10 +13,7 @@ export class TenderDocumentsController {
 
   @Permissions('tender-documents:read:published', 'tender-documents:read:internal')
   @Get()
-  findAll(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query('tenderId') tenderId?: string,
-  ) {
+  findAll(@CurrentUser() user: AuthenticatedUser, @Query('tenderId') tenderId?: string) {
     return this.documentsService.findAll(user, tenderId);
   }
 

@@ -43,11 +43,7 @@ export class FilesController {
     @Req() request: RequestWithUser,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const descriptor = await this.filesService.prepareDownload(
-      id,
-      user,
-      request.ip,
-    );
+    const descriptor = await this.filesService.prepareDownload(id, user, request.ip);
 
     if (!existsSync(descriptor.storagePath)) {
       throw new NotFoundException('Stored file is not available');

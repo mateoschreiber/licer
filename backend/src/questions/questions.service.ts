@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { AuthenticatedUser } from '../common/auth/authenticated-user.interface';
 import { ROLES } from '../common/constants/roles';
@@ -30,10 +26,7 @@ export class QuestionsService {
     if (!tender || tender.deletedAt || tender.status === 'BORRADOR') {
       throw new NotFoundException('Tender not found');
     }
-    if (
-      tender.questionDeadline &&
-      tender.questionDeadline.getTime() < Date.now()
-    ) {
+    if (tender.questionDeadline && tender.questionDeadline.getTime() < Date.now()) {
       throw new ForbiddenException('Question deadline is closed');
     }
 
@@ -70,8 +63,17 @@ export class QuestionsService {
   async findOne(id: string, user: AuthenticatedUser) {
     const supplierView = user.roles.includes(ROLES.PROVEEDOR);
     const question = await this.prisma.question.findFirst({
-      where: { id, deletedAt: null, ...(supplierView ? { supplierId: user.supplierId ?? 'none' } : {}) },
-      include: { answer: { include: { author: { select: { name: true } } } }, tender: { select: { id: true, code: true, title: true } }, supplier: { select: { legalName: true, ruc: true } }, user: { select: { name: true } } },
+      where: {
+        id,
+        deletedAt: null,
+        ...(supplierView ? { supplierId: user.supplierId ?? 'none' } : {}),
+      },
+      include: {
+        answer: { include: { author: { select: { name: true } } } },
+        tender: { select: { id: true, code: true, title: true } },
+        supplier: { select: { legalName: true, ruc: true } },
+        user: { select: { name: true } },
+      },
     });
     if (!question) throw new NotFoundException('Question not found');
     return question;

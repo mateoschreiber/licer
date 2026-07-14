@@ -107,9 +107,7 @@ describe('BidsService security rules', () => {
     };
     const service = createService(prisma, { log: jest.fn() });
 
-    await expect(service.submit('bid-1', supplierUser)).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(service.submit('bid-1', supplierUser)).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('audits internal bid view immediately', async () => {

@@ -1,16 +1,8 @@
-import {
-  CallHandler,
-  ExecutionContext,
-  Injectable,
-  NestInterceptor,
-} from '@nestjs/common';
+import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable, catchError, tap, throwError } from 'rxjs';
 import { AuditService } from '../../audit/audit.service';
-import {
-  AUDIT_ACTION_KEY,
-  AuditActionMetadata,
-} from '../decorators/audit-action.decorator';
+import { AUDIT_ACTION_KEY, AuditActionMetadata } from '../decorators/audit-action.decorator';
 import { RequestWithUser } from '../auth/request-with-user.interface';
 
 @Injectable()
@@ -21,10 +13,10 @@ export class AuditInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const metadata = this.reflector.getAllAndOverride<AuditActionMetadata>(
-      AUDIT_ACTION_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const metadata = this.reflector.getAllAndOverride<AuditActionMetadata>(AUDIT_ACTION_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     if (!metadata) {
       return next.handle();
@@ -32,10 +24,7 @@ export class AuditInterceptor implements NestInterceptor {
 
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const entityId =
-      request.params.id ??
-      request.params.tenderId ??
-      request.body?.id ??
-      request.body?.tenderId;
+      request.params.id ?? request.params.tenderId ?? request.body?.id ?? request.body?.tenderId;
 
     return next.handle().pipe(
       tap(() => {

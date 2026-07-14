@@ -12,11 +12,7 @@ interface DataTableProps<T> {
   emptyText?: string;
 }
 
-export function DataTable<T>({
-  columns,
-  rows,
-  emptyText = 'Sin datos',
-}: DataTableProps<T>) {
+export function DataTable<T>({ columns, rows, emptyText = 'Sin datos' }: DataTableProps<T>) {
   return (
     <div className="table-shell">
       <table>
@@ -38,12 +34,12 @@ export function DataTable<T>({
             rows.map((row, index) => {
               const id = (row as { id?: unknown }).id;
               return (
-              <tr key={typeof id === 'string' ? id : index}>
-                {columns.map((column) => (
-                  <td key={column.key}>{column.render(row)}</td>
-                ))}
-              </tr>
-            );
+                <tr key={typeof id === 'string' ? id : index}>
+                  {columns.map((column) => (
+                    <td key={column.key}>{column.render(row)}</td>
+                  ))}
+                </tr>
+              );
             })
           )}
         </tbody>

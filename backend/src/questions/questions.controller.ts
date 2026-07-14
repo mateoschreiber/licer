@@ -13,10 +13,7 @@ export class QuestionsController {
 
   @Permissions('questions:read:own', 'questions:read:internal')
   @Get()
-  findAll(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query('tenderId') tenderId?: string,
-  ) {
+  findAll(@CurrentUser() user: AuthenticatedUser, @Query('tenderId') tenderId?: string) {
     return this.questionsService.findAll(user, tenderId);
   }
 

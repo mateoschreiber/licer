@@ -34,10 +34,16 @@ export function ConfirmDialog({
         </div>
         <p>{message}</p>
         <div className="modal-actions">
-          {!hideCancel && <button type="button" className="button ghost" onClick={onClose}>
-            Cancelar
-          </button>}
-          <button type="button" className={variant === 'success' ? 'button primary' : 'button danger'} onClick={onConfirm}>
+          {!hideCancel && (
+            <button type="button" className="button ghost" onClick={onClose}>
+              Cancelar
+            </button>
+          )}
+          <button
+            type="button"
+            className={variant === 'success' ? 'button primary' : 'button danger'}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </button>
         </div>

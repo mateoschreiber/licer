@@ -34,10 +34,7 @@ describe('RequestingAreasService code generation', () => {
     const prisma = {
       requestingArea: {
         findFirst: jest.fn().mockResolvedValue(null),
-        findMany: jest.fn().mockResolvedValue([
-          { code: 'ADM' },
-          { code: 'ADM-02' },
-        ]),
+        findMany: jest.fn().mockResolvedValue([{ code: 'ADM' }, { code: 'ADM-02' }]),
         create: jest.fn().mockImplementation(({ data }) => data),
       },
     };

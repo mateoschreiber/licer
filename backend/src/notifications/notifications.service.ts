@@ -21,9 +21,7 @@ export class NotificationsService {
   }
 
   findMine(user: AuthenticatedUser) {
-    const filters: Array<{ userId?: string; supplierId?: string }> = [
-      { userId: user.id },
-    ];
+    const filters: Array<{ userId?: string; supplierId?: string }> = [{ userId: user.id }];
     if (user.supplierId) {
       filters.push({ supplierId: user.supplierId });
     }

@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRequestingAreaDto } from './dto/create-requesting-area.dto';
 import { UpdateRequestingAreaDto } from './dto/update-requesting-area.dto';
@@ -118,9 +114,7 @@ export class RequestingAreasService {
   }
 
   private buildBaseCode(name: string) {
-    const words = this.normalizeCodeText(name)
-      .split(' ')
-      .filter(Boolean);
+    const words = this.normalizeCodeText(name).split(' ').filter(Boolean);
     const raw = words.join('').slice(0, 3);
     return (raw || 'ARE').slice(0, 3).padEnd(3, 'X');
   }

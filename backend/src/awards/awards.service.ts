@@ -52,10 +52,18 @@ export class AwardsService {
         take: 100,
         orderBy: { createdAt: 'desc' },
       });
-      results.push(...tenders
-        .filter((t) => matches(t.id, t.code, t.title))
-        .slice(0, 8)
-        .map((t) => ({ kind: 'tender', id: t.id, label: t.code + ' - ' + t.title, code: t.code, title: t.title })));
+      results.push(
+        ...tenders
+          .filter((t) => matches(t.id, t.code, t.title))
+          .slice(0, 8)
+          .map((t) => ({
+            kind: 'tender',
+            id: t.id,
+            label: t.code + ' - ' + t.title,
+            code: t.code,
+            title: t.title,
+          })),
+      );
     }
 
     if (type === 'all' || type === 'supplier') {
@@ -65,10 +73,19 @@ export class AwardsService {
         take: 100,
         orderBy: { legalName: 'asc' },
       });
-      results.push(...suppliers
-        .filter((supplier) => matches(supplier.id, supplier.ruc, supplier.legalName, supplier.tradeName))
-        .slice(0, 8)
-        .map((supplier) => ({ kind: 'supplier', id: supplier.id, label: supplier.ruc + ' - ' + supplier.legalName, ruc: supplier.ruc })));
+      results.push(
+        ...suppliers
+          .filter((supplier) =>
+            matches(supplier.id, supplier.ruc, supplier.legalName, supplier.tradeName),
+          )
+          .slice(0, 8)
+          .map((supplier) => ({
+            kind: 'supplier',
+            id: supplier.id,
+            label: supplier.ruc + ' - ' + supplier.legalName,
+            ruc: supplier.ruc,
+          })),
+      );
     }
 
     if (type === 'all' || type === 'bid') {
@@ -81,20 +98,36 @@ export class AwardsService {
         take: 100,
         orderBy: { submittedAt: 'desc' },
       });
-      results.push(...bids
-        .filter((bid) => matches(bid.id, bid.receiptCode, bid.tender.code, bid.tender.title, bid.supplier.ruc, bid.supplier.legalName))
-        .slice(0, 8)
-        .map((bid) => ({
-          kind: 'bid',
-          id: bid.id,
-          label: (bid.receiptCode ?? bid.id.slice(0, 8)) + ' - ' + bid.tender.code + ' - ' + bid.supplier.legalName,
-          receiptCode: bid.receiptCode,
-          tenderId: bid.tenderId,
-          tenderCode: bid.tender.code,
-          supplierId: bid.supplierId,
-          supplierRuc: bid.supplier.ruc,
-          amount: bid.totalAmount ? Number(bid.totalAmount) : undefined,
-        })));
+      results.push(
+        ...bids
+          .filter((bid) =>
+            matches(
+              bid.id,
+              bid.receiptCode,
+              bid.tender.code,
+              bid.tender.title,
+              bid.supplier.ruc,
+              bid.supplier.legalName,
+            ),
+          )
+          .slice(0, 8)
+          .map((bid) => ({
+            kind: 'bid',
+            id: bid.id,
+            label:
+              (bid.receiptCode ?? bid.id.slice(0, 8)) +
+              ' - ' +
+              bid.tender.code +
+              ' - ' +
+              bid.supplier.legalName,
+            receiptCode: bid.receiptCode,
+            tenderId: bid.tenderId,
+            tenderCode: bid.tender.code,
+            supplierId: bid.supplierId,
+            supplierRuc: bid.supplier.ruc,
+            amount: bid.totalAmount ? Number(bid.totalAmount) : undefined,
+          })),
+      );
     }
 
     return results.slice(0, 12);
@@ -115,7 +148,9 @@ export class AwardsService {
       },
       include: {
         tender: { select: { id: true, code: true, title: true, status: true, currency: true } },
-        supplier: { select: { id: true, ruc: true, legalName: true, tradeName: true, status: true } },
+        supplier: {
+          select: { id: true, ruc: true, legalName: true, tradeName: true, status: true },
+        },
       },
     });
 
@@ -187,12 +222,22 @@ export class AwardsService {
       return this.buildSupplierResponse('supplierName', supplierMatches[0]);
     }
 
-    return { mode: 'none' as const, matchedBy: null, message: 'No se encontro ningun resultado para el identificador ingresado' };
+    return {
+      mode: 'none' as const,
+      matchedBy: null,
+      message: 'No se encontro ningun resultado para el identificador ingresado',
+    };
   }
 
   private async buildSupplierResponse(
     matchedBy: 'supplierId' | 'supplierRuc' | 'supplierName',
-    supplier: { id: string; ruc: string; legalName: string; tradeName: string | null; status: string },
+    supplier: {
+      id: string;
+      ruc: string;
+      legalName: string;
+      tradeName: string | null;
+      status: string;
+    },
   ) {
     const eligibleBids = await this.prisma.bid.findMany({
       where: {
@@ -220,7 +265,10 @@ export class AwardsService {
         currency: b.currency,
         tender: b.tender,
       })),
-      warnings: eligibleBids.length === 0 ? ['No se encontraron ofertas elegibles para este proveedor'] : [],
+      warnings:
+        eligibleBids.length === 0
+          ? ['No se encontraron ofertas elegibles para este proveedor']
+          : [],
     };
   }
 
@@ -235,7 +283,9 @@ export class AwardsService {
         status: { notIn: ['BORRADOR', 'ANULADA'] },
       },
       include: {
-        supplier: { select: { id: true, ruc: true, legalName: true, tradeName: true, status: true } },
+        supplier: {
+          select: { id: true, ruc: true, legalName: true, tradeName: true, status: true },
+        },
       },
       orderBy: { submittedAt: 'desc' },
       take: 20,
@@ -254,15 +304,31 @@ export class AwardsService {
         currency: b.currency,
         supplier: b.supplier,
       })),
-      warnings: eligibleBids.length === 0 ? ['No se encontraron ofertas elegibles para esta licitacion'] : [],
+      warnings:
+        eligibleBids.length === 0
+          ? ['No se encontraron ofertas elegibles para esta licitacion']
+          : [],
     };
   }
 
   private buildSingleResponse(
     matchedBy: 'bidId',
     tender: { id: string; code: string; title: string; status: string; currency: string },
-    supplier: { id: string; ruc: string; legalName: string; tradeName: string | null; status: string },
-    bid: { id: string; version: number; status: string; submittedAt: Date | null; totalAmount: unknown; currency: string },
+    supplier: {
+      id: string;
+      ruc: string;
+      legalName: string;
+      tradeName: string | null;
+      status: string;
+    },
+    bid: {
+      id: string;
+      version: number;
+      status: string;
+      submittedAt: Date | null;
+      totalAmount: unknown;
+      currency: string;
+    },
   ) {
     return {
       mode: 'single' as const,

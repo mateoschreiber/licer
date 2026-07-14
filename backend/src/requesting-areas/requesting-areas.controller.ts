@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { AuditAction } from '../common/decorators/audit-action.decorator';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { CreateRequestingAreaDto } from './dto/create-requesting-area.dto';
@@ -15,9 +7,7 @@ import { RequestingAreasService } from './requesting-areas.service';
 
 @Controller('requesting-areas')
 export class RequestingAreasController {
-  constructor(
-    private readonly requestingAreasService: RequestingAreasService,
-  ) {}
+  constructor(private readonly requestingAreasService: RequestingAreasService) {}
 
   @Permissions('requesting-areas:read:internal')
   @Get()

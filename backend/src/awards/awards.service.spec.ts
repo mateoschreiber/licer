@@ -24,8 +24,20 @@ describe('AwardsService resolve and validation', () => {
       supplier: {
         findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([
-          { id: 'sup-1', ruc: '8001', legalName: 'Proveedor Uno', tradeName: null, status: 'ACTIVO' },
-          { id: 'sup-2', ruc: '8002', legalName: 'Proveedor Dos', tradeName: null, status: 'ACTIVO' },
+          {
+            id: 'sup-1',
+            ruc: '8001',
+            legalName: 'Proveedor Uno',
+            tradeName: null,
+            status: 'ACTIVO',
+          },
+          {
+            id: 'sup-2',
+            ruc: '8002',
+            legalName: 'Proveedor Dos',
+            tradeName: null,
+            status: 'ACTIVO',
+          },
         ]),
       },
     };
@@ -58,11 +70,16 @@ describe('AwardsService resolve and validation', () => {
     };
     const service = createService(prisma);
 
-    await expect(service.award({
-      tenderId: 'tender-1',
-      supplierId: 'supplier-1',
-      bidId: 'bid-1',
-      reason: 'Mejor oferta tecnica',
-    }, adminUser)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.award(
+        {
+          tenderId: 'tender-1',
+          supplierId: 'supplier-1',
+          bidId: 'bid-1',
+          reason: 'Mejor oferta tecnica',
+        },
+        adminUser,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

@@ -112,20 +112,14 @@ export class BidsService {
 
     return this.prisma.bid.findMany({
       where,
-      include: supplierView
-        ? this.bidIncludeForSupplier()
-        : this.bidIncludeForInternal(),
+      include: supplierView ? this.bidIncludeForSupplier() : this.bidIncludeForInternal(),
       orderBy: { createdAt: 'desc' },
       skip,
       take: query.pageSize,
     });
   }
 
-  async findOne(
-    id: string,
-    user: AuthenticatedUser,
-    ip?: string,
-  ) {
+  async findOne(id: string, user: AuthenticatedUser, ip?: string) {
     const bid = await this.prisma.bid.findFirst({
       where: { id, deletedAt: null },
       include: user.roles.includes(ROLES.PROVEEDOR)
@@ -231,7 +225,9 @@ export class BidsService {
     if (dto.items.length === 0) {
       throw new BadRequestException('La oferta debe incluir al menos un item');
     }
-    const linkedIds = [...new Set(dto.items.flatMap((item) => item.tenderItemId ? [item.tenderItemId] : []))];
+    const linkedIds = [
+      ...new Set(dto.items.flatMap((item) => (item.tenderItemId ? [item.tenderItemId] : []))),
+    ];
     if (linkedIds.length) {
       const validCount = await this.prisma.tenderItem.count({
         where: { id: { in: linkedIds }, tenderId, deletedAt: null },
@@ -240,9 +236,13 @@ export class BidsService {
         throw new BadRequestException('Uno o mas items no pertenecen a la licitacion seleccionada');
       }
     }
-    const invalidAdditional = dto.items.some((item) => !item.tenderItemId && (!item.pendingApproval || !item.description?.trim()));
+    const invalidAdditional = dto.items.some(
+      (item) => !item.tenderItemId && (!item.pendingApproval || !item.description?.trim()),
+    );
     if (invalidAdditional) {
-      throw new BadRequestException('Los items adicionales requieren descripcion y aceptacion de aprobacion pendiente');
+      throw new BadRequestException(
+        'Los items adicionales requieren descripcion y aceptacion de aprobacion pendiente',
+      );
     }
   }
 
@@ -279,11 +279,7 @@ export class BidsService {
     return `REC-${Date.now()}-${id.slice(0, 8)}`;
   }
 
-  private async auditDeniedBidAccess(
-    bidId: string,
-    user: AuthenticatedUser,
-    ip?: string,
-  ) {
+  private async auditDeniedBidAccess(bidId: string, user: AuthenticatedUser, ip?: string) {
     await this.auditService.log({
       actorId: user.id,
       role: user.roles[0],

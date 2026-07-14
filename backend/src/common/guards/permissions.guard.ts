@@ -17,10 +17,10 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
-    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
-      PERMISSIONS_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     if (!requiredPermissions?.length) {
       throw new ForbiddenException('Permission metadata required');
@@ -34,9 +34,7 @@ export class PermissionsGuard implements CanActivate {
     }
 
     const userPermissions = request.user?.permissions ?? [];
-    const allowed = requiredPermissions.some((permission) =>
-      userPermissions.includes(permission),
-    );
+    const allowed = requiredPermissions.some((permission) => userPermissions.includes(permission));
 
     if (!allowed) {
       throw new ForbiddenException('Permission denied');

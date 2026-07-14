@@ -55,9 +55,7 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    const passwordHash = dto.password
-      ? await bcrypt.hash(dto.password, 12)
-      : undefined;
+    const passwordHash = dto.password ? await bcrypt.hash(dto.password, 12) : undefined;
 
     return this.prisma.$transaction(async (tx) => {
       if (dto.roleIds) {
@@ -72,7 +70,7 @@ export class UsersService {
         where: { id },
         data: {
           email: dto.email,
-        username: dto.username,
+          username: dto.username,
           name: dto.name,
           passwordHash,
           status: dto.status,
