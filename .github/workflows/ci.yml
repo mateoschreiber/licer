@@ -11,8 +11,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
       - run: corepack enable
+      - run: corepack prepare pnpm@11.7.0 --activate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @licer/backend prisma:generate
       - run: pnpm format:check
