@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { api } from '../../shared/api/client';
+import { notify } from '../../shared/components/FeedbackHost';
 
 interface ResetForm {
   email: string;
@@ -11,6 +12,9 @@ export function ResetPasswordPage() {
 
   async function onSubmit(values: ResetForm) {
     await api.post('/auth/reset-password/request', values);
+    notify('Si la cuenta existe, recibirá las instrucciones en su correo.', {
+      title: 'Solicitud enviada',
+    });
   }
 
   return (
@@ -23,7 +27,7 @@ export function ResetPasswordPage() {
             <input type="email" {...register('email', { required: true })} />
           </label>
           <button className="button primary" type="submit" disabled={formState.isSubmitting}>
-            Enviar solicitud
+            {formState.isSubmitting ? 'Enviando...' : 'Enviar solicitud'}
           </button>
         </form>
         <Link to="/login">Volver al login</Link>

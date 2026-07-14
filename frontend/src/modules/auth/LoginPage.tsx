@@ -48,7 +48,7 @@ export function LoginPage() {
           {error ? <p className="form-error">{error}</p> : null}
           <button className="button primary" type="submit" disabled={formState.isSubmitting}>
             <LogIn size={18} />
-            Ingresar
+            {formState.isSubmitting ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
         <div className="auth-links">

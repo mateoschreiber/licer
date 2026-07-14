@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { EmptyState } from './UiPrimitives';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { EmptyState, Pagination } from './UiPrimitives';
 
 export interface DataTableColumn<T> {
   key: string;
@@ -12,6 +12,8 @@ interface DataTableProps<T> {
   rows: T[];
   emptyText?: string;
   label?: string;
+  pageSize?: number;
+  paginate?: boolean;
 }
 
 export function DataTable<T>({
@@ -19,7 +21,21 @@ export function DataTable<T>({
   rows,
   emptyText = 'Sin datos',
   label = 'Listado de resultados',
+  pageSize = 12,
+  paginate = true,
 }: DataTableProps<T>) {
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  const visibleRows = useMemo(
+    () => (paginate ? rows.slice((page - 1) * pageSize, page * pageSize) : rows),
+    [page, pageSize, paginate, rows],
+  );
+
   if (rows.length === 0) {
     return (
       <div className="table-shell">
@@ -42,7 +58,7 @@ export function DataTable<T>({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => {
+          {visibleRows.map((row, index) => {
             const id = (row as { id?: unknown }).id;
             return (
               <tr key={typeof id === 'string' ? id : index}>
@@ -56,6 +72,9 @@ export function DataTable<T>({
           })}
         </tbody>
       </table>
+      {paginate && pageCount > 1 ? (
+        <Pagination page={page} pageCount={pageCount} onChange={setPage} />
+      ) : null}
     </div>
   );
 }

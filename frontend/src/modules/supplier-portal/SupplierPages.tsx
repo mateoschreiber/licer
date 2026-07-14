@@ -11,7 +11,7 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { StatusBadge } from '../../shared/components/StatusBadge';
 import { TenderSelector } from '../../shared/components/TenderSelector';
 import { PhoneInput } from '../../shared/components/PhoneInput';
-import { confirmAction } from '../../shared/components/FeedbackHost';
+import { confirmAction, notify } from '../../shared/components/FeedbackHost';
 import { LoadingState } from '../../shared/components/UiPrimitives';
 import {
   displayTenderCode,
@@ -160,6 +160,9 @@ export function SupplierRegisterPage() {
 
   async function onSubmit(values: SupplierRegisterForm) {
     await api.post('/suppliers/register', { ...values, categories: [] });
+    notify('Su solicitud fue registrada. Ya puede iniciar sesión cuando sea habilitada.', {
+      title: 'Registro enviado',
+    });
     navigate('/login');
   }
 
@@ -233,7 +236,7 @@ export function SupplierRegisterPage() {
           </label>
           <div className="form-actions full">
             <button className="button primary" type="submit" disabled={formState.isSubmitting}>
-              Solicitar registro
+              {formState.isSubmitting ? 'Enviando solicitud...' : 'Solicitar registro'}
             </button>
             <button className="button ghost" type="button" onClick={() => navigate('/login')}>
               Cancelar
