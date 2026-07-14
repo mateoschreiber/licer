@@ -87,13 +87,6 @@ export class BidsService {
             notes: item.notes,
           })),
         },
-        documents: {
-          create:
-            dto.documents?.map((document) => ({
-              fileId: document.fileId,
-              type: document.type,
-            })) ?? [],
-        },
       },
       include: this.bidIncludeForSupplier(),
     });

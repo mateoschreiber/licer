@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Check, FilePlus, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
-import { api, apiRequest } from '../../shared/api/client';
+import { api, apiRequest, previewFile } from '../../shared/api/client';
 import { API_URL } from '../../config/api';
 import { useAuth } from '../../shared/auth/AuthProvider';
 import { BidSummary, TenderSummary } from '../../shared/types';
@@ -15,7 +15,8 @@ import { StatusBadge } from '../../shared/components/StatusBadge';
 import { Timeline } from '../../shared/components/Timeline';
 import { TenderSelector } from '../../shared/components/TenderSelector';
 import { SupplierSelector } from '../../shared/components/SupplierSelector';
-import { displayTenderCode, formatPyDate, formatPyDateTime } from '../../shared/utils/format';
+import { PhoneInput } from '../../shared/components/PhoneInput';
+import { displayTenderCode, formatMoney, formatPyDate, formatPyDateTime } from '../../shared/utils/format';
 
 type Row = Record<string, unknown>;
 
@@ -246,62 +247,27 @@ export function UsersRolesPage() {
 }
 
 export function SuppliersManagementPage() {
-  const queryClient = useQueryClient();
-  const { data = [] } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: () => api.get<Row[]>('/suppliers'),
-  });
-  const approve = useMutation({
-    mutationFn: (id: string) => api.post(`/suppliers/${id}/approve`, { reason: 'Homologacion manual' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['suppliers'] }),
-  });
-  const block = useMutation({
-    mutationFn: (id: string) => api.post(`/suppliers/${id}/block`, { reason: 'Bloqueo manual' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['suppliers'] }),
-  });
-
-  return (
-    <>
-      <PageHeader title="Gestion de proveedores" />
-      <DataTable
-        rows={data}
-        columns={[
-          { key: 'ruc', header: 'RUC', render: (row) => String(row.ruc) },
-          { key: 'legalName', header: 'Razon social', render: (row) => String(row.legalName) },
-          { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
-          {
-            key: 'actions',
-            header: '',
-            render: (row) => (
-              <div className="row-actions">
-                <Link to={`/internal/suppliers/${String(row.id)}`}>Ver / Editar</Link>
-                <button className="icon-button" type="button" onClick={() => approve.mutate(String(row.id))} title="Aprobar">
-                  <Check size={16} />
-                </button>
-                <button className="icon-button danger" type="button" onClick={() => block.mutate(String(row.id))} title="Bloquear">
-                  <X size={16} />
-                </button>
-              </div>
-            ),
-          },
-        ]}
-      />
-    </>
-  );
+  const { data = [] } = useQuery({ queryKey: ['suppliers'], queryFn: () => api.get<Row[]>('/suppliers') });
+  return <><PageHeader title="Gestion de proveedores" actions={<Link className="button primary" to="/supplier/register"><Plus size={16} /> Anadir proveedor</Link>} /><DataTable rows={data} columns={[
+    { key: 'ruc', header: 'RUC', render: (row) => String(row.ruc) },
+    { key: 'legalName', header: 'Razon social', render: (row) => String(row.legalName) },
+    { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
+    { key: 'actions', header: 'Acciones', render: (row) => <Link className="button ghost" to={`/internal/suppliers/${String(row.id)}`}>Ver detalles</Link> },
+  ]} /></>;
 }
 
 interface SupplierAdminDetail extends Row {
   id: string; ruc: string; legalName: string; billingEmail: string; billingAddress: string;
   tradeName?: string | null; contactName?: string | null; contactEmail?: string | null;
-  legalRepresentative?: string | null; relevantContacts?: string | null; clientRelationshipDuration?: string | null;
-  phone?: string | null; address?: string | null; status: string;
+  legalRepresentative?: string | null; legalRepresentativeFirstName?: string | null; legalRepresentativeLastName?: string | null; legalRepresentativeDocumentId?: string | null; relevantContacts?: string | null; clientRelationshipDuration?: string | null;
+  phone?: string | null; phoneCountry?: string | null; address?: string | null; status: string;
   documents?: Array<{ id: string; type: string; description?: string | null; fileId: string; status: string; file?: { originalName?: string } }>;
 }
 
 interface SupplierAdminForm {
   ruc: string; legalName: string; tradeName: string; billingEmail: string; billingAddress: string;
-  contactName: string; contactEmail: string; legalRepresentative: string; relevantContacts: string;
-  clientRelationshipDuration: string; phone: string; address: string; status: string;
+  contactName: string; contactEmail: string; legalRepresentative?: string; legalRepresentativeFirstName: string; legalRepresentativeLastName: string; legalRepresentativeDocumentId: string; relevantContacts: string;
+  clientRelationshipDuration: string; phone: string; phoneCountry: string; address: string; status: string;
 }
 
 export function SupplierDetailPage() {
@@ -321,14 +287,14 @@ export function SupplierDetailPage() {
       ruc: data.ruc, legalName: data.legalName, tradeName: data.tradeName ?? '',
       billingEmail: data.billingEmail, billingAddress: data.billingAddress,
       contactName: data.contactName ?? '', contactEmail: data.contactEmail ?? '',
-      legalRepresentative: data.legalRepresentative ?? '', relevantContacts: data.relevantContacts ?? '',
-      clientRelationshipDuration: data.clientRelationshipDuration ?? '', phone: data.phone ?? '',
+      legalRepresentativeFirstName: data.legalRepresentativeFirstName ?? (data.legalRepresentative ?? '').trim().split(/\s+/)[0] ?? '', legalRepresentativeLastName: data.legalRepresentativeLastName ?? (data.legalRepresentative ?? '').trim().split(/\s+/).slice(1).join(' '), legalRepresentativeDocumentId: data.legalRepresentativeDocumentId ?? '', relevantContacts: data.relevantContacts ?? '',
+      clientRelationshipDuration: data.clientRelationshipDuration ?? '', phone: data.phone ?? '', phoneCountry: data.phoneCountry ?? 'PY',
       address: data.address ?? '', status: data.status,
     });
   }, [data?.id]);
   const save = useMutation({
     mutationFn: (values: SupplierAdminForm) => api.patch('/suppliers/' + id, values),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['supplier-detail', id] }); await queryClient.invalidateQueries({ queryKey: ['suppliers'] }); },
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['supplier-detail', id] }); await queryClient.invalidateQueries({ queryKey: ['suppliers'] }); window.alert('Cambios guardados correctamente.'); },
   });
   const addDocument = useMutation({
     mutationFn: async () => {
@@ -343,19 +309,23 @@ export function SupplierDetailPage() {
       await queryClient.invalidateQueries({ queryKey: ['suppliers'] });
     },
   });
+  const approveDocument = useMutation({ mutationFn: (documentId: string) => api.patch('/suppliers/' + id + '/documents/' + documentId, { status: 'APROBADO' }), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['supplier-detail', id] }) });
+  const deleteDocument = useMutation({ mutationFn: (documentId: string) => api.delete('/suppliers/' + id + '/documents/' + documentId), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['supplier-detail', id] }) });
+  const deleteSupplier = useMutation({ mutationFn: () => api.delete('/suppliers/' + id), onSuccess: () => navigate('/internal/suppliers') });
 
   return (
     <>
-      <PageHeader title={data ? data.legalName : 'Detalle proveedor'} description={data ? data.ruc : ''} actions={<div className="row-actions"><button className="button ghost" type="button" onClick={() => navigate('/internal/suppliers')}>Volver</button></div>} />
+      <PageHeader title={data ? data.legalName : 'Detalle proveedor'} description={data ? data.ruc : ''} actions={<div className="row-actions"><button className="button ghost" type="button" onClick={() => navigate('/internal/suppliers')}>Volver</button><button className="button danger" type="button" onClick={() => { if (confirm('Eliminar proveedor y bloquear sus usuarios?')) deleteSupplier.mutate(); }}><Trash2 size={16} /> Eliminar</button></div>} />
       {!data ? <section className="panel">Cargando proveedor...</section> : <>{!isAdmin ? <section className="panel"><p>Solo el administrador puede modificar datos y documentos de proveedores.</p></section> : <>
         <section className="panel"><div className="section-heading"><div><h2>Editar datos del proveedor</h2><p>Campos de facturacion y contactos registrados.</p></div></div>
-          <form className="grid-form" onSubmit={form.handleSubmit((values) => save.mutate(values))}>
-            <label>RUC<input {...form.register('ruc', { required: true })} /></label><label>Razon social<input {...form.register('legalName', { required: true })} /></label>
+          <form className="grid-form" onSubmit={form.handleSubmit((values) => { if (window.confirm('Guardar los cambios del proveedor?')) save.mutate(values); })}>
+            <label>RUC<input inputMode="numeric" autoComplete="off" {...form.register('ruc', { required: true })} /></label><label>Razon social<input autoComplete="organization" {...form.register('legalName', { required: true })} /></label>
             <label>Correo de facturacion<input type="email" {...form.register('billingEmail', { required: true })} /></label><label>Direccion de facturacion<input {...form.register('billingAddress', { required: true })} /></label>
-            <label>Nombre comercial<input {...form.register('tradeName')} /></label><label>Representante legal<input {...form.register('legalRepresentative')} /></label>
-            <label>Correo de contacto<input type="email" {...form.register('contactEmail')} /></label><label>Telefono<input {...form.register('phone')} /></label>
+            <label>Nombre comercial<input {...form.register('tradeName')} /></label><label>Nombre del representante legal<input autoComplete="given-name" {...form.register('legalRepresentativeFirstName')} /></label>
+            <label>Apellido del representante legal<input autoComplete="family-name" {...form.register('legalRepresentativeLastName')} /></label><label>Cedula de identidad del representante<input inputMode="numeric" autoComplete="off" {...form.register('legalRepresentativeDocumentId')} /></label>
+            <label>Correo de contacto<input type="email" autoComplete="email" {...form.register('contactEmail')} /></label><label>Telefono<input type="hidden" {...form.register('phone')} /><PhoneInput value={form.watch('phone')} country={form.watch('phoneCountry') ?? 'PY'} onChange={(phone) => form.setValue('phone', phone, { shouldDirty: true })} onCountryChange={(country) => form.setValue('phoneCountry', country, { shouldDirty: true })} /></label>
             <label>Tiempo de trabajo con la empresa licitante<input {...form.register('clientRelationshipDuration')} placeholder="Ej.: 2 anos" /></label><label>Estado<select {...form.register('status')}><option value="PENDIENTE">Pendiente</option><option value="ACTIVO">Activo</option><option value="BLOQUEADO">Bloqueado</option></select></label>
-            <label className="full">Funcionarios relevantes / contacto basico<textarea rows={4} {...form.register('relevantContacts')} /></label>
+            
             <div className="form-actions full"><button className="button primary" type="submit" disabled={save.isPending}><Pencil size={16} /> Guardar cambios</button></div>
           </form>
           {save.isError && <p className="error-message">{save.error instanceof Error ? save.error.message : 'No se pudo guardar el proveedor.'}</p>}
@@ -375,6 +345,7 @@ export function SupplierDetailPage() {
         { key: 'description', header: 'Descripcion', render: (row) => String(row.description ?? '-') },
         { key: 'file', header: 'Archivo', render: (row) => (row.file as { originalName?: string } | undefined)?.originalName ?? '-' },
         { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
+        { key: 'actions', header: 'Acciones', render: (row) => <div className="row-actions"><button className="button ghost" type="button" onClick={() => void previewFile('/files/' + String(row.fileId) + '/download')}>Previsualizar</button>{String(row.status) !== 'APROBADO' && <button className="button primary" type="button" onClick={() => approveDocument.mutate(String(row.id))}><Check size={16} /> Aprobar</button>}<button className="button danger" type="button" onClick={() => { if (confirm('Eliminar documento?')) deleteDocument.mutate(String(row.id)); }}><Trash2 size={16} /> Eliminar</button></div> },
       ]} /> : <p className="muted">Sin documentos registrados.</p>}</section></>}
     </>
   );
@@ -691,12 +662,32 @@ export function TenderCreateEditPage() {
   );
 }
 
+function escapePrintHtml(value: unknown) {
+  return String(value ?? '-').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] ?? character);
+}
+
+function previewTenderA4(data: TenderDetailData) {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) { window.alert('El navegador bloqueo la ventana de previsualizacion. Habilite las ventanas emergentes e intente nuevamente.'); return; }
+  const detail = (label: string, value: unknown) => `<tr><th>${escapePrintHtml(label)}</th><td>${escapePrintHtml(value)}</td></tr>`;
+  const itemRows = data.items?.length
+    ? data.items.map((item, index) => `<tr><td>${index + 1}</td><td>${escapePrintHtml(item.description)}</td><td>${escapePrintHtml(item.quantity)}</td><td>${escapePrintHtml(item.specs ?? '-')}</td><td>${escapePrintHtml(item.referenceBrandModel ?? '-')}</td></tr>`).join('')
+    : '<tr><td colspan="5">Sin items registrados.</td></tr>';
+  const attachmentRows = data.documents?.length
+    ? data.documents.map((document, index) => `<tr><td>${index + 1}</td><td>${escapePrintHtml(document.title)}</td><td>${escapePrintHtml(document.type)}</td><td>Version ${escapePrintHtml(document.version)}</td></tr>`).join('')
+    : '<tr><td colspan="4">Sin adjuntos registrados.</td></tr>';
+  printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapePrintHtml(displayTenderCode(data.code))} - ${escapePrintHtml(data.title)}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font:10pt Arial,sans-serif;color:#17231e}h1{font-size:20pt;margin:0 0 3px}h2{font-size:12pt;color:#146c5c;border-bottom:1px solid #bdd7cf;padding-bottom:4px;margin:19px 0 8px}.sub{color:#52706a;margin:0}.meta{margin:18px 0;border:1px solid #d7e1dc;border-collapse:collapse;width:100%}.meta th,.meta td{padding:6px 8px;border:1px solid #d7e1dc;text-align:left}.meta th{width:31%;background:#f0f6f3}table{border-collapse:collapse;width:100%;margin-top:8px}thead{background:#146c5c;color:#fff}th,td{border:1px solid #d7e1dc;padding:6px;text-align:left;vertical-align:top}.footer{border-top:1px solid #d7e1dc;margin-top:18px;padding-top:6px;color:#52706a;font-size:8pt}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><h1>Expediente de licitacion</h1><p class="sub">${escapePrintHtml(displayTenderCode(data.code))} · ${escapePrintHtml(data.title)}</p><h2>Datos generales</h2><table class="meta">${detail('Sucursal', data.branch?.name)}${detail('Categoria', data.category?.name)}${detail('Area solicitante', data.requestingArea ? `${data.requestingArea.code ? data.requestingArea.code + ' - ' : ''}${data.requestingArea.name}` : '-')}${detail('Responsable', data.responsibleEmail)}${detail('Estado', data.status)}${detail('Descripcion', data.description)}</table><h2>Fechas y condiciones</h2><table class="meta">${detail('Fecha base', formatPyDate(data.publishedAt))}${detail('Limite de consultas', formatPyDate(data.questionDeadline))}${detail('Limite de respuestas', formatPyDate(data.responseDeadline))}${detail('Limite de ofertas', formatPyDate(data.bidDeadline))}${detail('Moneda', data.currency === 'USD' ? 'USD' : 'Guaranies (Gs.)')}${detail('IVA incluido', data.vatIncluded ? 'Si' : 'No')}${detail('Forma de pago', data.paymentMethod === 'CREDITO' ? 'Credito' : 'Contado')}${detail('Condiciones de credito', data.paymentMethod === 'CREDITO' ? data.paymentTerms : '-')}</table><h2>Items solicitados</h2><table><thead><tr><th>#</th><th>Descripcion</th><th>Cantidad</th><th>Especificaciones</th><th>Marca / modelo de referencia</th></tr></thead><tbody>${itemRows}</tbody></table><h2>Adjuntos</h2><table><thead><tr><th>#</th><th>Archivo</th><th>Tipo</th><th>Referencia</th></tr></thead><tbody>${attachmentRows}</tbody></table><p class="footer">Documento generado desde LICI el ${escapePrintHtml(formatPyDateTime(new Date()))}. Los adjuntos quedan identificados como parte integrante del expediente.</p></body></html>`);
+  printWindow.document.close();
+  printWindow.focus();
+  window.setTimeout(() => printWindow.print(), 250);
+}
+
 export function TenderDetailInternalPage() {
   const { id } = useParams(); const navigate = useNavigate(); const { hasRole } = useAuth(); const isAdmin = hasRole(['ADMIN']); const queryClient = useQueryClient();
   const { data } = useQuery({ queryKey: ['internal-tender', id], queryFn: () => api.get<TenderDetailData>('/tenders/' + id), enabled: Boolean(id) });
   const publish = useMutation({ mutationFn: () => api.post('/tenders/' + id + '/publish'), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['internal-tender', id] }) });
   const removeTender = useMutation({ mutationFn: () => api.delete('/tenders/' + id), onSuccess: () => navigate('/internal/tenders') });
-  return <><PageHeader title={data?.title ?? 'Licitacion'} description={data ? displayTenderCode(data.code) : ''} actions={<div className="row-actions"><button className="button ghost" type="button" onClick={() => navigate('/internal/tenders')}>Volver</button>{data?.status === 'BORRADOR' && <button className="button primary" type="button" onClick={() => { if (confirm('Confirma publicar esta licitacion? Esta accion la hara visible para proveedores autorizados.')) publish.mutate(); }}>Publicar</button>}<Link className="button ghost" to="/internal/awards">Ir a decision</Link>{isAdmin && <button className="button danger" type="button" onClick={() => { if (confirm('Confirma eliminar esta licitacion? Se ocultara del portal y se conservara su trazabilidad.')) removeTender.mutate(); }} disabled={removeTender.isPending}><Trash2 size={16} /> Eliminar</button>}</div>} />
+  return <><PageHeader title={data?.title ?? 'Licitacion'} description={data ? displayTenderCode(data.code) : ''} actions={<div className="row-actions"><button className="button ghost" type="button" onClick={() => data && previewTenderA4(data)}>Previsualizar</button><button className="button ghost" type="button" onClick={() => navigate('/internal/tenders')}>Volver</button>{data?.status === 'BORRADOR' && <button className="button primary" type="button" onClick={() => { if (confirm('Confirma publicar esta licitacion? Esta accion la hara visible para proveedores autorizados.')) publish.mutate(); }}>Publicar</button>}<Link className="button ghost" to="/internal/awards">Ir a decision</Link>{isAdmin && <button className="button danger" type="button" onClick={() => { if (confirm('Confirma eliminar esta licitacion? Se ocultara del portal y se conservara su trazabilidad.')) removeTender.mutate(); }} disabled={removeTender.isPending}><Trash2 size={16} /> Eliminar</button>}</div>} />
     {!data ? <section className="panel">Cargando licitacion...</section> : <>
       <section className="panel tender-detail"><div className="section-heading"><h2>Datos generales</h2>{data.status && <StatusBadge status={data.status} />}</div><dl className="detail-grid"><dt>Codigo</dt><dd>{displayTenderCode(data.code)}</dd><dt>Sucursal</dt><dd>{data.branch?.name ?? '-'}</dd><dt>Categoria</dt><dd>{data.category?.name ?? '-'}</dd><dt>Area solicitante</dt><dd>{data.requestingArea ? ((data.requestingArea.code ? data.requestingArea.code + ' - ' : '') + data.requestingArea.name) : '-'}</dd><dt>Responsable</dt><dd>{data.responsibleEmail ?? '-'}</dd><dt>Descripcion</dt><dd>{data.description}</dd></dl></section>
       <section className="panel tender-detail"><h2>Fechas</h2><dl className="detail-grid"><dt>Fecha base</dt><dd>{formatPyDate(data.publishedAt)}</dd><dt>Limite de consultas</dt><dd>{formatPyDate(data.questionDeadline)}</dd><dt>Limite de respuestas</dt><dd>{formatPyDate(data.responseDeadline)}</dd><dt>Limite de ofertas</dt><dd>{formatPyDate(data.bidDeadline)}</dd></dl></section>
@@ -755,21 +746,21 @@ export function DocumentsAddendasPage() {
 }
 
 export function QuestionsInboxPage() {
-  const { data = [] } = useQuery({
-    queryKey: ['internal-questions'],
-    queryFn: () => api.get<Row[]>('/questions'),
-  });
+  const { data = [] } = useQuery({ queryKey: ['internal-questions'], queryFn: () => api.get<Row[]>('/questions') });
+  return <><PageHeader title="Bandeja de consultas" /><DataTable rows={data} columns={[
+    { key: 'tenderId', header: 'Licitacion', render: (row) => { const tender = row.tender as { code?: string; title?: string } | undefined; return tender?.code ? displayTenderCode(tender.code) + ' - ' + tender.title : '-'; } },
+    { key: 'text', header: 'Pregunta', render: (row) => String(row.text) },
+    { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
+    { key: 'action', header: 'Acciones', render: (row) => <Link className="button ghost compact-button" to={'/internal/questions/' + String(row.id)}>Abrir</Link> },
+  ]} /></>;
+}
 
-  return (
-    <>
-      <PageHeader title="Bandeja de consultas" />
-      <DataTable rows={data} columns={[
-        { key: 'tenderId', header: 'Licitacion', render: (row) => { const tender = row.tender as { code?: string; title?: string } | undefined; return tender?.code ? displayTenderCode(tender.code) + ' - ' + tender.title : '-'; } },
-        { key: 'text', header: 'Pregunta', render: (row) => String(row.text) },
-        { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
-      ]} />
-    </>
-  );
+interface QuestionTicket { id: string; text: string; status: string; createdAt: string; tender?: { code: string; title: string }; supplier?: { legalName: string; ruc: string }; answer?: { text: string; publishedAt?: string; author?: { name?: string } } | null; }
+export function QuestionDetailInternalPage() {
+  const { id } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient(); const form = useForm<{ text: string }>({ defaultValues: { text: '' } });
+  const { data } = useQuery({ queryKey: ['internal-question', id], queryFn: () => api.get<QuestionTicket>('/questions/' + id), enabled: Boolean(id) });
+  const answer = useMutation({ mutationFn: (values: { text: string }) => api.post('/questions/' + id + '/answer', values), onSuccess: async () => { form.reset(); await queryClient.invalidateQueries({ queryKey: ['internal-question', id] }); await queryClient.invalidateQueries({ queryKey: ['internal-questions'] }); } });
+  return <><PageHeader title="Consulta" description={data?.tender ? displayTenderCode(data.tender.code) + ' - ' + data.tender.title : ''} actions={<button className="button ghost" type="button" onClick={() => navigate('/internal/questions')}>Volver</button>} />{!data ? <section className="panel">Cargando consulta...</section> : <section className="panel ticket"><div className="ticket-head"><div><strong>{data.supplier ? data.supplier.legalName + ' · ' + data.supplier.ruc : 'Proveedor'}</strong><small>{formatPyDateTime(data.createdAt)}</small></div><div><StatusBadge status={data.status} />{data.status === 'RESPONDIDA' && <span className="ticket-closed">Cerrado</span>}</div></div><div className="ticket-message supplier-message"><strong>Consulta del proveedor</strong><p>{data.text}</p></div>{data.answer ? <div className="ticket-message company-message"><strong>Respuesta de la empresa{data.answer.author?.name ? ' · ' + data.answer.author.name : ''}</strong><p>{data.answer.text}</p><small>{formatPyDateTime(data.answer.publishedAt)}</small></div> : <form className="ticket-reply" onSubmit={form.handleSubmit((values) => answer.mutate(values))}><label>Responder<textarea rows={5} {...form.register('text', { required: true })} placeholder="Escriba la respuesta para el proveedor" /></label><button className="button primary" type="submit" disabled={answer.isPending}><Check size={16} /> Enviar respuesta y cerrar</button></form>}{answer.isError && <p className="error-message">No se pudo enviar la respuesta.</p>}</section>}</>;
 }
 
 export function BidsInboxPage() {
@@ -798,7 +789,7 @@ export function BidsInboxPage() {
         { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={row.status} /> },
         { key: 'submittedAt', header: 'Enviada (PY)', render: (row) => formatPyDateTime(row.submittedAt) },
         { key: 'action', header: '', render: (row) => <div className="row-actions">
-          <Link to={'/internal/bids/' + row.id}>Ver</Link>
+          <Link className="button ghost compact-button" to={'/internal/bids/' + row.id}>Ver</Link>
           {hasRole(['ADMIN']) && <button className="button danger compact-button" type="button" onClick={() => setBidToDelete(row)}><Trash2 size={15} /> Eliminar</button>}
         </div> },
       ]} />
@@ -823,7 +814,13 @@ interface InternalBidDetail extends BidSummary {
   vatIncludedAccepted?: boolean;
   supplier?: { id: string; ruc: string; legalName: string; tradeName?: string | null };
   items?: Array<{ id: string; description?: string | null; quantity: string | number; unitPrice: string | number; total: string | number; brand?: string | null; model?: string | null; pendingApproval?: boolean; notes?: string | null }>;
-  documents?: Array<{ id: string; fileId: string; type: string; file?: { originalName?: string } }>;
+}
+
+function previewBidA4(data: InternalBidDetail) {
+  const win = window.open('', '_blank'); if (!win) { window.alert('Habilite las ventanas emergentes para previsualizar la oferta.'); return; }
+  const esc = (value: unknown) => String(value ?? '-').replace(/[&<>\"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' })[char] ?? char);
+  const rows = data.items?.map((item, index) => `<tr><td>${index + 1}</td><td>${esc(item.description)}</td><td>${esc(item.quantity)}</td><td>${esc(formatMoney(item.unitPrice, data.currency))}</td><td>${esc(formatMoney(item.total, data.currency))}</td><td>${esc(item.brand ?? '-')}</td><td>${esc(item.model ?? '-')}</td></tr>`).join('') ?? '<tr><td colspan="7">Sin items.</td></tr>';
+  win.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Oferta ${esc(data.receiptCode)}</title><style>@page{size:A4;margin:16mm}body{font:10pt Arial;color:#17231e}h1{margin:0;color:#146c5c;font-size:20pt}h2{font-size:12pt;border-bottom:1px solid #bdd7cf;padding-bottom:4px;margin-top:20px}table{border-collapse:collapse;width:100%;margin-top:8px}th,td{border:1px solid #d7e1dc;padding:6px;text-align:left;vertical-align:top}th{background:#edf4f1}.items thead th{background:#146c5c;color:#fff}.sub{color:#52706a}.foot{margin-top:18px;font-size:8pt;color:#52706a}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><h1>Oferta presentada</h1><p class="sub">${esc(data.receiptCode)} · ${esc(data.tender?.code ? displayTenderCode(data.tender.code) : '-')}</p><h2>Resumen</h2><table><tr><th>Proveedor</th><td>${esc(data.supplier ? data.supplier.ruc + ' - ' + data.supplier.legalName : '-')}</td></tr><tr><th>Licitacion</th><td>${esc(data.tender ? displayTenderCode(data.tender.code) + ' - ' + data.tender.title : '-')}</td></tr><tr><th>Fecha de envio</th><td>${esc(formatPyDateTime(data.submittedAt))}</td></tr><tr><th>Total</th><td>${esc(formatMoney(data.totalAmount, data.currency))}</td></tr><tr><th>Pago</th><td>${esc(data.paymentTerms)}</td></tr><tr><th>Entrega</th><td>${esc(data.deliveryTerms)}</td></tr></table><h2>Items ofertados</h2><table class="items"><thead><tr><th>#</th><th>Item</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th><th>Marca</th><th>Modelo</th></tr></thead><tbody>${rows}</tbody></table><p class="foot">Documento generado el ${esc(formatPyDateTime(new Date()))}.</p></body></html>`); win.document.close(); win.focus(); window.setTimeout(() => win.print(), 250);
 }
 
 export function BidDetailInternalPage() {
@@ -837,20 +834,19 @@ export function BidDetailInternalPage() {
 
   return (
     <>
-      <PageHeader title="Detalle interno de oferta" description={data?.receiptCode ?? ''} actions={<button className="button ghost" type="button" onClick={() => navigate('/internal/bids')}>Volver</button>} />
+      <PageHeader title="Detalle interno de oferta" description={data?.receiptCode ?? ''} actions={<div className="row-actions"><button className="button ghost" type="button" onClick={() => data && previewBidA4(data)}>Previsualizar</button><button className="button ghost" type="button" onClick={() => navigate('/internal/bids')}>Volver</button></div>} />
       {!data ? <section className="panel">Cargando oferta...</section> : <>
         <section className="panel tender-detail"><div className="section-heading"><h2>Datos de la oferta</h2><StatusBadge status={data.status} /></div><dl className="detail-grid">
           <dt>Oferta</dt><dd>{data.receiptCode ?? '-'}</dd>
           <dt>Licitacion</dt><dd>{data.tender ? displayTenderCode(data.tender.code) + ' - ' + data.tender.title : '-'}</dd>
           <dt>Proveedor</dt><dd>{data.supplier ? data.supplier.ruc + ' - ' + data.supplier.legalName : '-'}</dd>
           <dt>Enviada (PY)</dt><dd>{formatPyDateTime(data.submittedAt)}</dd>
-          <dt>Total</dt><dd>{data.totalAmount ?? '-'} {data.currency ?? ''}</dd>
+          <dt>Total</dt><dd>{formatMoney(data.totalAmount, data.currency)}</dd>
           <dt>Condicion de pago</dt><dd>{data.paymentTerms ?? '-'}</dd>
           <dt>Plazo de entrega</dt><dd>{data.deliveryTerms ?? '-'}</dd>
           <dt>Precios con IVA</dt><dd>{data.vatIncludedAccepted ? 'Aceptado' : 'No registrado'}</dd>
         </dl></section>
-        <section className="panel tender-detail"><h2>Items ofertados</h2>{data.items?.length ? <div className="detail-items-wrap"><table className="detail-items"><thead><tr><th>Item</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th><th>Marca</th><th>Modelo</th><th>Aprobacion</th><th>Notas</th></tr></thead><tbody>{data.items.map((item) => <tr key={item.id}><td>{item.description ?? '-'}</td><td>{String(item.quantity)}</td><td>{Number(item.unitPrice).toLocaleString('es-PY')}</td><td>{Number(item.total).toLocaleString('es-PY')}</td><td>{item.brand ?? '-'}</td><td>{item.model ?? '-'}</td><td>{item.pendingApproval ? 'Pendiente' : 'Incluido en licitacion'}</td><td>{item.notes ?? '-'}</td></tr>)}</tbody></table></div> : <p>Sin items.</p>}</section>
-        <section className="panel tender-detail"><h2>Documentos de la oferta</h2>{data.documents?.length ? <ul className="attachment-list">{data.documents.map((document) => <li key={document.id}>{document.file?.originalName ?? document.type}</li>)}</ul> : <p>Sin documentos.</p>}</section>
+        <section className="panel tender-detail"><h2>Items ofertados</h2>{data.items?.length ? <div className="detail-items-wrap"><table className="detail-items"><thead><tr><th>Item</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th><th>Marca</th><th>Modelo</th><th>Aprobacion</th><th>Notas</th></tr></thead><tbody>{data.items.map((item) => <tr key={item.id}><td>{item.description ?? '-'}</td><td>{String(item.quantity)}</td><td>{formatMoney(item.unitPrice, data.currency)}</td><td>{formatMoney(item.total, data.currency)}</td><td>{item.brand ?? '-'}</td><td>{item.model ?? '-'}</td><td>{item.pendingApproval ? 'Pendiente' : 'Incluido en licitacion'}</td><td>{item.notes ?? '-'}</td></tr>)}</tbody></table></div> : <p>Sin items.</p>}</section>
       </>}
     </>
   );
@@ -899,7 +895,7 @@ export function InternalComparisonPage() {
       <DataTable rows={data} columns={[
         { key: 'tender', header: 'Licitacion', render: (row) => row.tender?.code ? displayTenderCode(row.tender.code) : '-' },
         { key: 'supplier', header: 'Proveedor', render: (row) => row.supplierId },
-        { key: 'total', header: 'Total', render: (row) => String(row.totalAmount ?? '-') },
+        { key: 'total', header: 'Total', render: (row) => formatMoney(row.totalAmount as string | number | null | undefined, row.tender?.currency as string | undefined) },
         { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={row.status} /> },
       ]} />
     </>
@@ -934,7 +930,7 @@ interface DecisionSuggestion {
 
 export function AwardCancelDesertPage() {
   const navigate = useNavigate();
-  const { register, handleSubmit, reset, setValue } = useForm<{ tenderId: string; supplierId: string; bidId?: string; amount?: number; reason: string; mode: string }>();
+  const { register, handleSubmit, reset, setValue, watch } = useForm<{ tenderId: string; supplierId: string; bidId?: string; amount?: number; reason: string; mode: string }>();
   const [identifier, setIdentifier] = useState('');
   const [tenderDisplay, setTenderDisplay] = useState('');
   const [supplierDisplay, setSupplierDisplay] = useState('');
@@ -943,6 +939,9 @@ export function AwardCancelDesertPage() {
   const [resolveLoading, setResolveLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<DecisionSuggestion[]>([]);
   const [suggestionField, setSuggestionField] = useState('');
+  const decisionCurrency = resolveResult?.bid?.currency ?? resolveResult?.tender?.currency ?? 'PYG';
+  const decisionAmount = watch('amount');
+  const formattedDecisionAmount = decisionCurrency === 'USD' ? new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(decisionAmount) || 0) : new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(Math.round(Number(decisionAmount) || 0));
 
   async function loadSuggestions(value: string, field: string) {
     setSuggestionField(field);
@@ -1046,7 +1045,7 @@ export function AwardCancelDesertPage() {
               <div className="preview-row"><strong>Proveedor:</strong> {resolveResult.supplier.legalName} (RUC: {resolveResult.supplier.ruc})</div>
             )}
             {resolveResult.bid && (
-              <div className="preview-row"><strong>Oferta:</strong> {resolveResult.bid.id} - {resolveResult.bid.status} - {resolveResult.bid.totalAmount} {resolveResult.bid.currency}</div>
+              <div className="preview-row"><strong>Oferta:</strong> {resolveResult.bid.id} - {resolveResult.bid.status} - {formatMoney(resolveResult.bid.totalAmount, resolveResult.bid.currency)}</div>
             )}
             {resolveResult.eligibleBids && resolveResult.eligibleBids.length > 0 && (
               <div>
@@ -1056,7 +1055,7 @@ export function AwardCancelDesertPage() {
                     <li key={b.id} style={{ cursor: 'pointer' }} onClick={() => selectEligibleBid(b)}>
                       {b.tender && `${displayTenderCode(b.tender.code)} | `}
                       {b.supplier && `${b.supplier.legalName} | `}
-                      {b.id.slice(0, 8)}... | {b.status} | {b.totalAmount} {b.currency}
+                      {b.id.slice(0, 8)}... | {b.status} | {formatMoney(b.totalAmount, b.currency)}
                     </li>
                   ))}
                 </ul>
@@ -1092,7 +1091,7 @@ export function AwardCancelDesertPage() {
           <label>Licitacion ID<input type="hidden" {...register('tenderId', { required: true })} /><div className="autocomplete-field"><input value={tenderDisplay} placeholder="Ej: 026-001" onChange={(event) => { setTenderDisplay(event.target.value); setValue('tenderId', ''); void loadSuggestions(event.target.value, 'tender'); }} />{suggestionMenu('tender')}</div></label>
           <label>Proveedor ID<input type="hidden" {...register('supplierId')} /><div className="autocomplete-field"><input value={supplierDisplay} placeholder="Ej: 80012345-6" onChange={(event) => { setSupplierDisplay(event.target.value); setValue('supplierId', ''); void loadSuggestions(event.target.value, 'supplier'); }} />{suggestionMenu('supplier')}</div></label>
           <label>Oferta ID<input type="hidden" {...register('bidId')} /><div className="autocomplete-field"><input value={bidDisplay} placeholder="Ej: REC-..." onChange={(event) => { setBidDisplay(event.target.value); setValue('bidId', ''); void loadSuggestions(event.target.value, 'bid'); }} />{suggestionMenu('bid')}</div></label>
-          <label>Monto<input type="number" {...register('amount', { valueAsNumber: true })} /></label>
+          <label>Monto ({decisionCurrency === 'USD' ? 'USD' : 'Gs.'})<input type="text" inputMode={decisionCurrency === 'USD' ? 'decimal' : 'numeric'} value={formattedDecisionAmount} onChange={(event) => { const raw = decisionCurrency === 'USD' ? event.target.value.replace(/,/g, '') : event.target.value.replace(/\D/g, ''); setValue('amount', Number(raw) || 0, { shouldDirty: true }); }} aria-label={decisionCurrency === 'USD' ? 'Monto en USD' : 'Monto en guaranies'} /></label>
           <label className="full">Motivo<textarea {...register('reason', { required: true })} /></label>
           <div className="form-actions"><button className="button danger" type="submit">Registrar decision</button><button className="button ghost" type="button" onClick={() => navigate(-1)}>Cancelar</button></div>
         </form>

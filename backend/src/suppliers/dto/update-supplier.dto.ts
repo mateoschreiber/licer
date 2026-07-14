@@ -36,6 +36,18 @@ export class UpdateSupplierDto {
 
   @IsOptional()
   @IsString()
+  legalRepresentativeFirstName?: string;
+
+  @IsOptional()
+  @IsString()
+  legalRepresentativeLastName?: string;
+
+  @IsOptional()
+  @IsString()
+  legalRepresentativeDocumentId?: string;
+
+  @IsOptional()
+  @IsString()
   relevantContacts?: string;
 
   @IsOptional()
@@ -45,6 +57,10 @@ export class UpdateSupplierDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @IsOptional()
+  @IsString()
+  phoneCountry?: string;
 
   @IsOptional()
   @IsString()

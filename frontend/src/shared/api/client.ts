@@ -67,6 +67,19 @@ export const api = {
     apiRequest<T>(path, { method: 'DELETE' }),
 };
 
+export async function previewFile(path: string) {
+  const token = getToken();
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: 'include',
+  });
+  if (!response.ok) throw new ApiError('File preview failed', response.status, await response.text());
+  const url = URL.createObjectURL(await response.blob());
+  const windowRef = window.open(url, '_blank', 'noopener');
+  if (!windowRef) URL.revokeObjectURL(url);
+  else window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export async function downloadFile(path: string, fileName: string) {
   const token = getToken();
   const headers = new Headers();

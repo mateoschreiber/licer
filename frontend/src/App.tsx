@@ -12,6 +12,7 @@ import {
   SubmissionReceiptPage,
   SupplierDocumentsPage,
   SupplierProfilePage,
+  SupplierQuestionDetailPage,
   SupplierRegisterPage,
   TenderDetailPage,
   TenderDocumentsPage,
@@ -29,6 +30,7 @@ import {
   ExpedientePage,
   InternalComparisonPage,
   QuestionsInboxPage,
+  QuestionDetailInternalPage,
   RequestingAreasPage,
   SupplierDetailPage,
   SuppliersManagementPage,
@@ -68,6 +70,7 @@ export function App() {
           <Route path="tenders/:id" element={<TenderDetailPage />} />
           <Route path="tenders/:id/documents" element={<TenderDocumentsPage />} />
           <Route path="questions" element={<QuestionsAnswersPage />} />
+          <Route path="questions/:id" element={<SupplierQuestionDetailPage />} />
           <Route path="bids/new" element={<CreateBidPage />} />
           <Route path="bids/:id" element={<MyBidDetailPage />} />
           <Route path="receipt" element={<SubmissionReceiptPage />} />
@@ -89,6 +92,7 @@ export function App() {
           <Route path="tenders/:id" element={<TenderDetailInternalPage />} />
           <Route path="documents" element={<DocumentsAddendasPage />} />
           <Route path="questions" element={<QuestionsInboxPage />} />
+          <Route path="questions/:id" element={<QuestionDetailInternalPage />} />
           <Route path="bids" element={<BidsInboxPage />} />
           <Route path="bids/:id" element={<BidDetailInternalPage />} />
           <Route path="evaluation/documental" element={<DocumentalEvaluationPage />} />

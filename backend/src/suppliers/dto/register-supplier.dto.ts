@@ -37,6 +37,18 @@ export class RegisterSupplierDto {
 
   @IsOptional()
   @IsString()
+  legalRepresentativeFirstName?: string;
+
+  @IsOptional()
+  @IsString()
+  legalRepresentativeLastName?: string;
+
+  @IsOptional()
+  @IsString()
+  legalRepresentativeDocumentId?: string;
+
+  @IsOptional()
+  @IsString()
   relevantContacts?: string;
 
   @IsOptional()
@@ -49,6 +61,10 @@ export class RegisterSupplierDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @IsOptional()
+  @IsString()
+  phoneCountry?: string;
 
   @IsOptional()
   @IsString()

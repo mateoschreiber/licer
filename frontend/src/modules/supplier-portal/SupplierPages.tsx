@@ -2,15 +2,16 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { CheckCircle, Send } from 'lucide-react';
-import { api, apiRequest, downloadFile } from '../../shared/api/client';
+import { Check, CheckCircle, Pencil, Plus, Send, Trash2, X } from 'lucide-react';
+import { api, apiRequest, downloadFile, previewFile } from '../../shared/api/client';
 import { BidSummary, TenderSummary } from '../../shared/types';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { DataTable } from '../../shared/components/DataTable';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { StatusBadge } from '../../shared/components/StatusBadge';
 import { TenderSelector } from '../../shared/components/TenderSelector';
-import { displayTenderCode, formatPyDate, formatPyDateTime } from '../../shared/utils/format';
+import { PhoneInput } from '../../shared/components/PhoneInput';
+import { displayTenderCode, formatMoney, formatPyDate, formatPyDateTime } from '../../shared/utils/format';
 import { API_URL } from '../../config/api';
 
 interface SupplierRegisterForm {
@@ -22,9 +23,13 @@ interface SupplierRegisterForm {
   contactName?: string;
   contactEmail?: string;
   legalRepresentative?: string;
+  legalRepresentativeFirstName?: string;
+  legalRepresentativeLastName?: string;
+  legalRepresentativeDocumentId?: string;
   relevantContacts?: string;
   clientRelationshipDuration?: string;
   phone?: string;
+  phoneCountry?: string;
   username: string;
   password: string;
 }
@@ -48,14 +53,28 @@ interface SupplierProfileInfo {
   billingEmail: string;
   billingAddress: string;
   legalRepresentative?: string | null;
+  legalRepresentativeFirstName?: string | null;
+  legalRepresentativeLastName?: string | null;
+  legalRepresentativeDocumentId?: string | null;
   relevantContacts?: string | null;
   clientRelationshipDuration?: string | null;
   contactName?: string | null;
   contactEmail?: string | null;
   phone?: string | null;
+  phoneCountry?: string | null;
   address?: string | null;
   status: string;
   documents?: SupplierDocumentInfo[];
+}
+
+interface SupplierStaff extends Record<string, unknown> {
+  id: string; firstName: string; lastName: string; phone?: string | null; phoneCountry?: string | null; title?: string | null;
+}
+
+interface SupplierProfileForm {
+  ruc: string; legalName: string; tradeName: string; billingEmail: string; billingAddress: string;
+  contactName: string; contactEmail: string; legalRepresentative?: string; legalRepresentativeFirstName: string; legalRepresentativeLastName: string; legalRepresentativeDocumentId: string; relevantContacts: string;
+  clientRelationshipDuration: string; phone: string; phoneCountry: string; address: string;
 }
 
 interface TenderItem {
@@ -111,7 +130,7 @@ interface BidDetail extends BidSummary {
 }
 
 export function SupplierRegisterPage() {
-  const { register, handleSubmit, formState } = useForm<SupplierRegisterForm>();
+  const { register, handleSubmit, formState, setValue, watch } = useForm<SupplierRegisterForm>();
   const navigate = useNavigate();
 
   async function onSubmit(values: SupplierRegisterForm) {
@@ -129,10 +148,11 @@ export function SupplierRegisterPage() {
           <label>Correo de facturacion<input type="email" {...register('billingEmail', { required: true })} /></label>
           <label>Direccion de facturacion<input {...register('billingAddress', { required: true })} /></label>
           <label>Nombre comercial<input {...register('tradeName')} /></label>
-          <label>Representante legal<input {...register('legalRepresentative')} /></label>
+          <label>Nombre del representante legal<input autoComplete="given-name" {...register('legalRepresentativeFirstName')} /></label>
+          <label>Apellido del representante legal<input autoComplete="family-name" {...register('legalRepresentativeLastName')} /></label>
+          <label>Cedula de identidad del representante<input inputMode="numeric" {...register('legalRepresentativeDocumentId')} /></label>
           <label>Correo de contacto<input type="email" {...register('contactEmail')} /></label>
-          <label>Telefono<input {...register('phone')} /></label>
-          <label className="full">Funcionarios relevantes / contacto basico<textarea rows={3} {...register('relevantContacts')} placeholder="Nombre, cargo, telefono y correo de los funcionarios relevantes" /></label>
+          <label>Telefono<input type="hidden" {...register('phone')} /><PhoneInput value={watch('phone') ?? ''} country={watch('phoneCountry') ?? 'PY'} onChange={(phone) => setValue('phone', phone, { shouldDirty: true })} onCountryChange={(country) => setValue('phoneCountry', country, { shouldDirty: true })} /></label>
           <label>Tiempo de trabajo con la empresa licitante<input {...register('clientRelationshipDuration')} placeholder="Ej.: 2 anos" /></label>
           <label>Usuario<input autoComplete="username" {...register('username', { required: true, minLength: 3 })} /></label>
           <label>Password<input type="password" {...register('password', { required: true })} /></label>
@@ -147,47 +167,24 @@ export function SupplierRegisterPage() {
 }
 
 export function SupplierProfilePage() {
+  const queryClient = useQueryClient();
+  const [tab, setTab] = useState<'profile' | 'staff'>('profile');
+  const [editing, setEditing] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<SupplierStaff | null>(null);
   const { data } = useQuery({ queryKey: ['supplier-profile'], queryFn: () => api.get<SupplierProfileInfo>('/suppliers/me') });
-  const logo = data?.documents?.find((document) => document.type === 'LOGO' && document.file?.mime.startsWith('image/'));
-  const [logoUrl, setLogoUrl] = useState('');
-
-  useEffect(() => {
-    if (!logo?.fileId) { setLogoUrl(''); return; }
-    let objectUrl = '';
-    const controller = new AbortController();
-    const token = window.localStorage.getItem('access_token');
-    fetch(API_URL + '/files/' + logo.fileId + '/download', {
-      headers: token ? { Authorization: 'Bearer ' + token } : {},
-      credentials: 'include',
-      signal: controller.signal,
-    })
-      .then((response) => response.ok ? response.blob() : Promise.reject())
-      .then((blob) => { objectUrl = URL.createObjectURL(blob); setLogoUrl(objectUrl); })
-      .catch(() => setLogoUrl(''));
-    return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [logo?.fileId]);
-
-  return (
-    <>
-      <PageHeader title="Mi perfil" description="Datos legales, facturacion y estado de homologacion." />
-      {!data ? <section className="panel">Cargando perfil...</section> : <section className="panel supplier-profile-panel">
-        <div className="supplier-profile-photo">{logoUrl ? <img src={logoUrl} alt={'Logo de ' + data.legalName} /> : <span>PL</span>}</div>
-        <div><dl className="detail-grid">
-          <dt>RUC</dt><dd>{data.ruc}</dd>
-          <dt>Razon social</dt><dd>{data.legalName}</dd>
-          <dt>Correo de facturacion</dt><dd>{data.billingEmail}</dd>
-          <dt>Direccion de facturacion</dt><dd>{data.billingAddress}</dd>
-          <dt>Representante legal</dt><dd>{data.legalRepresentative ?? '-'}</dd>
-          <dt>Funcionarios relevantes</dt><dd>{data.relevantContacts ?? '-'}</dd>
-          <dt>Tiempo de trabajo con la empresa licitante</dt><dd>{data.clientRelationshipDuration ?? '-'}</dd>
-          <dt>Contacto</dt><dd>{data.contactEmail ?? data.contactName ?? '-'}</dd>
-          <dt>Telefono</dt><dd>{data.phone ?? '-'}</dd>
-          <dt>Estado</dt><dd><StatusBadge status={data.status} /></dd>
-        </dl>
-        <p className="muted profile-admin-note">La edicion de datos y documentos se realiza desde Administracion de proveedores.</p></div>
-      </section>}
-    </>
-  );
+  const { data: staff = [] } = useQuery({ queryKey: ['supplier-staff'], queryFn: () => api.get<SupplierStaff[]>('/suppliers/me/users'), enabled: tab === 'staff' });
+  const form = useForm<SupplierProfileForm>();
+  const staffForm = useForm<{ firstName: string; lastName: string; phone: string; phoneCountry: string; title: string }>();
+  useEffect(() => { if (data) { const legacy = (data.legalRepresentative ?? '').trim().split(/\s+/); form.reset({ ruc: data.ruc, legalName: data.legalName, tradeName: data.tradeName ?? '', billingEmail: data.billingEmail, billingAddress: data.billingAddress, contactName: data.contactName ?? '', contactEmail: data.contactEmail ?? '', legalRepresentativeFirstName: data.legalRepresentativeFirstName ?? legacy[0] ?? '', legalRepresentativeLastName: data.legalRepresentativeLastName ?? legacy.slice(1).join(' '), legalRepresentativeDocumentId: data.legalRepresentativeDocumentId ?? '', relevantContacts: data.relevantContacts ?? '', clientRelationshipDuration: data.clientRelationshipDuration ?? '', phone: data.phone ?? '', phoneCountry: data.phoneCountry ?? 'PY', address: data.address ?? '' }); } }, [data?.id]);
+  const save = useMutation({ mutationFn: (values: SupplierProfileForm) => api.patch('/suppliers/me', values), onSuccess: async () => { setEditing(false); await queryClient.invalidateQueries({ queryKey: ['supplier-profile'] }); } });
+  const saveStaff = useMutation({ mutationFn: (values: { firstName: string; lastName: string; phone: string; phoneCountry: string; title: string }) => editingStaff ? api.patch('/suppliers/me/users/' + editingStaff.id, values) : api.post('/suppliers/me/users', values), onSuccess: async () => { setEditingStaff(null); staffForm.reset(); await queryClient.invalidateQueries({ queryKey: ['supplier-staff'] }); } });
+  const removeStaff = useMutation({ mutationFn: (staffId: string) => api.delete('/suppliers/me/users/' + staffId), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['supplier-staff'] }) });
+  const startStaff = (member?: SupplierStaff) => { setEditingStaff(member ?? null); staffForm.reset(member ? { firstName: member.firstName, lastName: member.lastName, phone: member.phone ?? '', phoneCountry: member.phoneCountry ?? 'PY', title: member.title ?? '' } : { firstName: '', lastName: '', phone: '', phoneCountry: 'PY', title: '' }); };
+  return <>
+    <PageHeader title="Mi perfil" description="Datos legales, facturacion y funcionarios." />
+    <div className="tabs"><button className={'button ghost ' + (tab === 'profile' ? 'active' : '')} type="button" onClick={() => setTab('profile')}>Editar informacion</button><button className={'button ghost ' + (tab === 'staff' ? 'active' : '')} type="button" onClick={() => setTab('staff')}>Funcionarios</button></div>
+    {tab === 'profile' ? (!data ? <section className="panel">Cargando perfil...</section> : <section className="panel"><div className="section-heading"><div><h2>Datos del proveedor</h2><p>Informacion legal, facturacion y contacto.</p></div>{!editing && <button className="button primary" type="button" onClick={() => setEditing(true)}><Pencil size={16} /> Editar</button>}</div>{editing ? <form className="grid-form" onSubmit={form.handleSubmit((values) => save.mutate(values))}><label>RUC<input {...form.register('ruc',{required:true})} /></label><label>Razon social<input {...form.register('legalName',{required:true})} /></label><label>Correo facturacion<input type="email" {...form.register('billingEmail',{required:true})} /></label><label>Direccion facturacion<input {...form.register('billingAddress',{required:true})} /></label><label>Nombre comercial<input {...form.register('tradeName')} /></label><label>Nombre del representante legal<input autoComplete="given-name" {...form.register('legalRepresentativeFirstName')} /></label><label>Apellido del representante legal<input autoComplete="family-name" {...form.register('legalRepresentativeLastName')} /></label><label>Cedula de identidad del representante<input inputMode="numeric" {...form.register('legalRepresentativeDocumentId')} /></label><label>Correo contacto<input type="email" {...form.register('contactEmail')} /></label><label>Telefono<input type="hidden" {...form.register('phone')} /><PhoneInput value={form.watch('phone')} country={form.watch('phoneCountry') ?? 'PY'} onChange={(phone) => form.setValue('phone', phone, { shouldDirty: true })} onCountryChange={(country) => form.setValue('phoneCountry', country, { shouldDirty: true })} /></label><label>Tiempo de trabajo<input {...form.register('clientRelationshipDuration')} /></label><label className="full">Direccion<input {...form.register('address')} /></label><div className="form-actions full"><button className="button primary" type="submit"><Check size={16} /> Guardar</button><button className="button ghost" type="button" onClick={() => setEditing(false)}><X size={16} /> Cancelar</button></div></form> : <dl className="detail-grid"><dt>RUC</dt><dd>{data.ruc}</dd><dt>Razon social</dt><dd>{data.legalName}</dd><dt>Facturacion</dt><dd>{data.billingEmail}</dd><dt>Direccion</dt><dd>{data.billingAddress}</dd><dt>Representante</dt><dd>{[data.legalRepresentativeFirstName, data.legalRepresentativeLastName].filter(Boolean).join(' ') || data.legalRepresentative || '-'}</dd><dt>Cedula del representante</dt><dd>{data.legalRepresentativeDocumentId ?? '-'}</dd><dt>Contacto</dt><dd>{data.contactEmail ?? '-'}</dd><dt>Telefono</dt><dd>{data.phone ?? '-'}</dd><dt>Estado</dt><dd><StatusBadge status={data.status} /></dd></dl>}</section>) : <section className="admin-crud-grid"><div className="panel admin-list-panel"><div className="section-heading"><div><h2>Funcionarios</h2><p>Informacion del equipo del proveedor. No tienen acceso al sistema.</p></div><button className="button primary" type="button" onClick={() => startStaff()}><Plus size={16} /> Agregar</button></div><DataTable rows={staff} columns={[{key:'firstName',header:'Nombre',render:(row)=>String(row.firstName)},{key:'lastName',header:'Apellido',render:(row)=>String(row.lastName)},{key:'phone',header:'Telefono',render:(row)=>String(row.phone ?? '-')},{key:'title',header:'Cargo',render:(row)=>String(row.title ?? '-')},{key:'actions',header:'',render:(row)=><div className="row-actions"><button className="button ghost" type="button" onClick={()=>startStaff(row as SupplierStaff)}><Pencil size={16} /> Editar</button><button className="button danger" type="button" onClick={()=>{if(confirm('Eliminar funcionario?')) removeStaff.mutate(String(row.id));}}><Trash2 size={16} /> Eliminar</button></div>}]}/></div><section className="panel admin-form-panel"><h2>{editingStaff ? 'Editar funcionario' : 'Nuevo funcionario'}</h2><form className="stack-form" onSubmit={staffForm.handleSubmit((values)=>saveStaff.mutate(values))}><label>Nombre<input {...staffForm.register('firstName',{required:true})}/></label><label>Apellido<input {...staffForm.register('lastName',{required:true})}/></label><label>Nro. de telefono<input type="hidden" {...staffForm.register('phone')} /><PhoneInput value={staffForm.watch('phone')} country={staffForm.watch('phoneCountry') ?? 'PY'} onChange={(phone) => staffForm.setValue('phone', phone, { shouldDirty: true })} onCountryChange={(country) => staffForm.setValue('phoneCountry', country, { shouldDirty: true })} /></label><label>Cargo<input {...staffForm.register('title')}/></label><button className="button primary" type="submit"><Check size={16} /> Guardar</button></form></section></section>}
+  </>;
 }
 
 export function SupplierDocumentsPage() {
@@ -263,7 +260,7 @@ export function SupplierDocumentsPage() {
           { key: 'description', header: 'Descripcion', render: (row) => String(row.description ?? '-') },
           { key: 'file', header: 'Archivo', render: (row) => (row.file as { originalName?: string } | undefined)?.originalName ?? '-' },
           { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
-          { key: 'download', header: '', render: (row) => <button className="button ghost" type="button" onClick={() => void downloadFile('/files/' + String(row.fileId) + '/download', ((row.file as { originalName?: string } | undefined)?.originalName ?? 'documento'))}>Descargar</button> },
+          { key: 'actions', header: 'Acciones', render: (row) => <div className="row-actions"><button className="button ghost" type="button" onClick={() => void previewFile('/files/' + String(row.fileId) + '/download')}>Previsualizar</button><button className="button danger" type="button" onClick={() => { if (confirm('Eliminar documento?')) api.delete('/suppliers/me/documents/' + String(row.id)).then(() => queryClient.invalidateQueries({ queryKey: ['supplier-profile'] })); }}><Trash2 size={16} /> Eliminar</button></div> },
         ]} /> : <p className="muted">Aun no hay documentos registrados.</p>}
       </section>
     </>
@@ -389,37 +386,20 @@ export function TenderDocumentsPage() {
 }
 
 export function QuestionsAnswersPage() {
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const { register, handleSubmit, reset, setValue, watch } = useForm<{ tenderId: string; text: string }>({ defaultValues: { tenderId: '', text: '' } });
+  const queryClient = useQueryClient(); const navigate = useNavigate(); const { register, handleSubmit, reset, setValue, watch } = useForm<{ tenderId: string; text: string }>({ defaultValues: { tenderId: '', text: '' } });
   const { data = [] } = useQuery({ queryKey: ['questions'], queryFn: () => api.get<Array<Record<string, unknown>>>('/questions') });
-  const mutation = useMutation({
-    mutationFn: (values: { tenderId: string; text: string }) => api.post('/questions', values),
-    onSuccess: async () => { reset(); await queryClient.invalidateQueries({ queryKey: ['questions'] }); },
-  });
+  const mutation = useMutation({ mutationFn: (values: { tenderId: string; text: string }) => api.post('/questions', values), onSuccess: async () => { reset(); await queryClient.invalidateQueries({ queryKey: ['questions'] }); } });
+  return <><PageHeader title="Consultas y respuestas" /><section className="panel"><form className="grid-form compact" onSubmit={handleSubmit((values) => mutation.mutate(values))}><input type="hidden" {...register('tenderId', { required: true })} /><TenderSelector value={watch('tenderId')} onChange={(id) => setValue('tenderId', id, { shouldValidate: true })} label="Licitacion" required /><label className="full">Consulta<textarea className="question-textarea" rows={5} {...register('text', { required: true })} placeholder="Escriba aqui su consulta con el mayor detalle posible" /></label><button className="button primary" type="submit">Enviar</button><button className="button ghost" type="button" onClick={() => { reset(); navigate('/supplier/tenders'); }}>Cancelar</button></form></section><DataTable rows={data} columns={[
+    { key: 'tenderId', header: 'Licitacion', render: (row) => { const tender = row.tender as { code?: string; title?: string } | undefined; return tender?.code ? displayTenderCode(tender.code) + ' - ' + tender.title : '-'; } },
+    { key: 'text', header: 'Pregunta', render: (row) => String(row.text) }, { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
+    { key: 'action', header: 'Acciones', render: (row) => <Link className="button ghost compact-button" to={'/supplier/questions/' + String(row.id)}>Abrir</Link> },
+  ]} /></>;
+}
 
-  return (
-    <>
-      <PageHeader title="Consultas y respuestas" />
-      <section className="panel">
-        <form className="grid-form compact" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <input type="hidden" {...register('tenderId', { required: true })} />
-          <TenderSelector value={watch('tenderId')} onChange={(id) => setValue('tenderId', id, { shouldValidate: true })} label="Licitacion" required />
-          <label className="full">Consulta<textarea className="question-textarea" rows={5} {...register('text', { required: true })} placeholder="Escriba aqui su consulta con el mayor detalle posible" /></label>
-          <button className="button primary" type="submit">Enviar</button>
-          <button className="button ghost" type="button" onClick={() => { reset(); navigate('/supplier/tenders'); }}>Cancelar</button>
-        </form>
-      </section>
-      <DataTable rows={data} columns={[
-        { key: 'tenderId', header: 'Licitacion', render: (row) => {
-          const tender = row.tender as { code?: string; title?: string } | undefined;
-          return tender?.code ? displayTenderCode(tender.code) + ' - ' + tender.title : '-';
-        } },
-        { key: 'text', header: 'Pregunta', render: (row) => String(row.text) },
-        { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={String(row.status)} /> },
-      ]} />
-    </>
-  );
+interface SupplierQuestionTicket { id: string; text: string; status: string; createdAt: string; tender?: { code: string; title: string }; answer?: { text: string; publishedAt?: string; author?: { name?: string } } | null; }
+export function SupplierQuestionDetailPage() {
+  const { id } = useParams(); const navigate = useNavigate(); const { data } = useQuery({ queryKey: ['supplier-question', id], queryFn: () => api.get<SupplierQuestionTicket>('/questions/' + id), enabled: Boolean(id) });
+  return <><PageHeader title="Consulta" description={data?.tender ? displayTenderCode(data.tender.code) + ' - ' + data.tender.title : ''} actions={<button className="button ghost" type="button" onClick={() => navigate('/supplier/questions')}>Volver</button>} />{!data ? <section className="panel">Cargando consulta...</section> : <section className="panel ticket"><div className="ticket-head"><small>{formatPyDateTime(data.createdAt)}</small><div><StatusBadge status={data.status} />{data.status === 'RESPONDIDA' && <span className="ticket-closed">Cerrado</span>}</div></div><div className="ticket-message supplier-message"><strong>Mi consulta</strong><p>{data.text}</p></div>{data.answer ? <div className="ticket-message company-message"><strong>Respuesta de la empresa{data.answer.author?.name ? ' · ' + data.answer.author.name : ''}</strong><p>{data.answer.text}</p><small>{formatPyDateTime(data.answer.publishedAt)}</small></div> : <p className="ticket-waiting">La consulta está pendiente de respuesta de la empresa.</p>}</section>}</>;
 }
 
 export function CreateBidPage() {
@@ -467,13 +447,22 @@ export function CreateBidPage() {
     })));
   }, [tender?.id]);
 
-  function parseGuarani(value: string) {
+  const bidCurrency = tender?.currency === 'USD' ? 'USD' : 'PYG';
+
+  function parseMoneyInput(value: string) {
+    if (bidCurrency === 'USD') {
+      const cleaned = value.replace(/[^0-9,.-]/g, '');
+      const normalized = cleaned.includes('.') ? cleaned.replace(/,/g, '') : cleaned.replace(',', '.');
+      return Number(normalized) || 0;
+    }
     const digits = value.replace(/\D/g, '');
     return digits ? Number(digits) : 0;
   }
 
-  function formatGuarani(value: number) {
-    return Math.round(Number(value) || 0).toLocaleString('es-PY');
+  function formatMoneyInput(value: number) {
+    return bidCurrency === 'USD'
+      ? new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0)
+      : new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(Math.round(Number(value) || 0));
   }
 
   function updateLine(index: number, field: keyof BidLine, value: string) {
@@ -483,7 +472,7 @@ export function CreateBidPage() {
         ...line,
         [field]: field === 'quantity' ? Number(value) : value,
       } as BidLine;
-      if (field === 'unitPrice') next.unitPrice = parseGuarani(value);
+      if (field === 'unitPrice') next.unitPrice = parseMoneyInput(value);
       next.total = Number(next.quantity) * Number(next.unitPrice);
       return next;
     }));
@@ -556,14 +545,14 @@ export function CreateBidPage() {
           <div className="full">
             <div className="section-heading"><div><h2>Items a cotizar</h2><p>Los precios unitarios y totales deben incluir IVA.</p></div></div>
             {bidLines.length ? <div className="detail-items-wrap"><table className="detail-items bid-entry-table">
-              <thead><tr><th>Item</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th><th>Marca</th><th>Modelo</th><th>Observaciones</th><th></th></tr></thead>
+              <thead><tr><th>Item</th><th>Cantidad</th><th>{bidCurrency === 'USD' ? 'Precio unitario (USD)' : 'Precio unitario (Gs.)'}</th><th>{bidCurrency === 'USD' ? 'Total (USD)' : 'Total (Gs.)'}</th><th>Marca</th><th>Modelo</th><th>Observaciones</th><th></th></tr></thead>
               <tbody>{bidLines.map((line, index) => <tr key={line.clientId}>
                 <td>{line.pendingApproval
                   ? <input value={line.description} placeholder="Descripcion del item adicional" onChange={(event) => updateLine(index, 'description', event.target.value)} required />
                   : <><strong>{line.description}</strong><small>Solicitado: {line.requestedQuantity}</small></>}</td>
                 <td><input type="number" min="0.0001" step="0.0001" value={line.quantity} onChange={(event) => updateLine(index, 'quantity', event.target.value)} required /></td>
-                <td><input type="text" inputMode="numeric" value={formatGuarani(line.unitPrice)} onChange={(event) => updateLine(index, 'unitPrice', event.target.value)} required /></td>
-                <td><input value={formatGuarani(line.total)} readOnly aria-readonly="true" /></td>
+                <td><input type="text" inputMode="numeric" value={formatMoneyInput(line.unitPrice)} onChange={(event) => updateLine(index, 'unitPrice', event.target.value)} required /></td>
+                <td><input value={formatMoneyInput(line.total)} readOnly aria-readonly="true" /></td>
                 <td><input value={line.brand} onChange={(event) => updateLine(index, 'brand', event.target.value)} /></td>
                 <td><input value={line.model} onChange={(event) => updateLine(index, 'model', event.target.value)} /></td>
                 <td><input value={line.notes} onChange={(event) => updateLine(index, 'notes', event.target.value)} /></td>
@@ -579,7 +568,7 @@ export function CreateBidPage() {
             </div>
           </section>
 
-          <div className="full offer-grand-total"><span>Total de todos los items</span><strong>{formatGuarani(grandTotal)} {tender?.currency === 'USD' ? 'USD' : 'Gs.'}</strong></div>
+          <div className="full offer-grand-total"><span>Total de todos los items</span><strong>{formatMoney(grandTotal, bidCurrency)}</strong></div>
           <p className="full offer-required-notice">* Todos los items y precios de la oferta incluyen IVA.</p>
           {submitBid.isError && <p className="error-message full">{submitBid.error instanceof Error ? submitBid.error.message : 'No se pudo enviar la oferta.'}</p>}
           <div className="form-actions full">
@@ -605,12 +594,12 @@ export function MyBidDetailPage() {
           <dt>Comprobante</dt><dd>{data.receiptCode ?? '-'}</dd>
           <dt>Licitacion</dt><dd>{data.tender ? displayTenderCode(data.tender.code) + ' - ' + data.tender.title : '-'}</dd>
           <dt>Enviada</dt><dd>{formatPyDateTime(data.submittedAt)}</dd>
-          <dt>Total</dt><dd>{data.totalAmount ?? '-'} {data.currency ?? ''}</dd>
+          <dt>Total</dt><dd>{formatMoney(data.totalAmount, data.currency)}</dd>
           <dt>Condicion de pago</dt><dd>{data.paymentTerms ?? '-'}</dd>
           <dt>Plazo de entrega</dt><dd>{data.deliveryTerms ?? '-'}</dd>
           <dt>Precios con IVA</dt><dd>{data.vatIncludedAccepted ? 'Aceptado' : 'No registrado'}</dd>
         </dl></section>
-        <section className="panel tender-detail"><h2>Items ofertados</h2>{data.items?.length ? <div className="detail-items-wrap"><table className="detail-items"><thead><tr><th>Item</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th><th>Marca</th><th>Modelo</th><th>Aprobacion</th><th>Notas</th></tr></thead><tbody>{data.items.map((item) => <tr key={item.id}><td>{item.description || '-'}</td><td>{item.quantity}</td><td>{Number(item.unitPrice).toLocaleString('es-PY')}</td><td>{Number(item.total).toLocaleString('es-PY')}</td><td>{item.brand || '-'}</td><td>{item.model || '-'}</td><td>{item.pendingApproval ? 'Pendiente' : 'Incluido en licitacion'}</td><td>{item.notes || '-'}</td></tr>)}</tbody></table></div> : <p>Sin items.</p>}</section>
+        <section className="panel tender-detail"><h2>Items ofertados</h2>{data.items?.length ? <div className="detail-items-wrap"><table className="detail-items"><thead><tr><th>Item</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th><th>Marca</th><th>Modelo</th><th>Aprobacion</th><th>Notas</th></tr></thead><tbody>{data.items.map((item) => <tr key={item.id}><td>{item.description || '-'}</td><td>{item.quantity}</td><td>{formatMoney(item.unitPrice, data.currency)}</td><td>{formatMoney(item.total, data.currency)}</td><td>{item.brand || '-'}</td><td>{item.model || '-'}</td><td>{item.pendingApproval ? 'Pendiente' : 'Incluido en licitacion'}</td><td>{item.notes || '-'}</td></tr>)}</tbody></table></div> : <p>Sin items.</p>}</section>
       </>}
     </>
   );

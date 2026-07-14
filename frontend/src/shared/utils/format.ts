@@ -34,3 +34,13 @@ export function formatPyDateTime(value?: string | Date | null) {
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? '-' : pyDateTime.format(date) + ' h';
 }
+
+
+export function formatMoney(value?: string | number | null, currency?: string | null) {
+  const amount = typeof value === 'number' ? value : Number(value ?? 0);
+  if (!Number.isFinite(amount)) return '-';
+  if (String(currency).toUpperCase() === 'USD') {
+    return 'USD ' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+  }
+  return 'Gs. ' + new Intl.NumberFormat('es-PY', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(amount));
+}

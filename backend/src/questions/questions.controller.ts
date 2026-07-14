@@ -20,6 +20,12 @@ export class QuestionsController {
     return this.questionsService.findAll(user, tenderId);
   }
 
+  @Permissions('questions:read:own', 'questions:read:internal')
+  @Get(':id')
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.questionsService.findOne(id, user);
+  }
+
   @Permissions('questions:create:own')
   @AuditAction({ action: 'QUESTION_CREATE', entity: 'Question' })
   @Post()

@@ -784,3 +784,27 @@ input[readonly] {
 .desired-mark { background: #fef3c7; color: #92400e; }
 .question-textarea { min-height: 130px; resize: vertical; }
 @media (max-width: 700px) { .supplier-profile-panel, .document-requirements { grid-template-columns: 1fr; } }
+
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.tabs .button.active { background: #146c5c; border-color: #146c5c; color: #fff; }
+.table-shell th, .table-shell td { text-align: left; vertical-align: middle; }
+
+.phone-input { display: flex; align-items: center; min-height: 2.45rem; border: 1px solid #c9d7d2; border-radius: .35rem; background: #fff; overflow: hidden; }
+.phone-input:focus-within { border-color: #146c5c; box-shadow: 0 0 0 2px rgba(20,108,92,.12); }
+.phone-input select { width: auto; min-width: 8.8rem; max-width: 12.5rem; height: 2.35rem; border: 0; border-right: 1px solid #c9d7d2; border-radius: 0; background: #f4f8f6; padding: 0 .45rem; }
+.phone-prefix { padding: 0 .45rem; color: #31534b; font-weight: 700; white-space: nowrap; }
+.phone-input input { flex: 1; min-width: 0; height: 2.35rem; border: 0; border-radius: 0; box-shadow: none; }
+@media (max-width: 640px) { .phone-input { grid-template-columns: 1fr; } }
+
+.ticket { max-width: 56rem; }
+.ticket-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem; }
+.ticket-head small, .ticket-message small { display:block; color:#60766f; margin-top:.35rem; }
+.ticket-closed { display:inline-block; margin-left:.45rem; color:#146c5c; font-size:.82rem; font-weight:700; }
+.ticket-message { max-width:82%; padding:.85rem 1rem; margin: .75rem 0; border-radius:.65rem; line-height:1.45; }
+.ticket-message p { margin:.45rem 0 0; white-space:pre-wrap; }
+.supplier-message { background:#edf4f1; border:1px solid #cfe2db; }
+.company-message { margin-left:auto; background:#146c5c; color:#fff; }
+.company-message small { color:#d9eee7; }
+.ticket-reply { margin-top:1.25rem; padding-top:1rem; border-top:1px solid #d7e1dc; }
+.ticket-reply textarea { width:100%; margin:.45rem 0 .7rem; }
+.ticket-waiting { color:#60766f; }
