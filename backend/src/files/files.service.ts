@@ -68,7 +68,7 @@ export class FilesService {
     });
 
     if (!file) {
-      throw new NotFoundException('File not found');
+      throw new NotFoundException('Archivo no encontrado');
     }
 
     const internal = user.permissions.includes('files:download:internal');
@@ -85,7 +85,7 @@ export class FilesService {
         entityId: id,
         result: 'DENIED',
       });
-      throw new ForbiddenException('File download denied');
+      throw new ForbiddenException('Descarga de archivo no autorizada');
     }
 
     const bidDocument = file.bidDocuments[0];

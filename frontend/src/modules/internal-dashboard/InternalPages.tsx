@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Check, FilePlus, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { api, apiRequest, previewFile } from '../../shared/api/client';
 import { API_URL } from '../../config/api';
@@ -82,15 +82,19 @@ export function DashboardPage() {
     queryKey: ['internal-bids'],
     queryFn: () => api.get<BidSummary[]>('/bids'),
   });
+  const { data: questions = [], isLoading: questionsLoading } = useQuery({
+    queryKey: ['internal-questions'],
+    queryFn: () => api.get<Row[]>('/questions'),
+  });
 
   return (
     <>
       <PageHeader
         title="Resumen operativo"
-        description="Estado general de licitaciones y ofertas."
+        description="Estado general de licitaciones, ofertas y consultas."
       />
-      {tendersLoading || bidsLoading ? (
-        <LoadingState label="Cargando resumen operativo" rows={3} />
+      {tendersLoading || bidsLoading || questionsLoading ? (
+        <LoadingState label="Cargando resumen operativo" rows={4} />
       ) : null}
       <section className="metric-grid">
         <MetricCard
@@ -111,6 +115,13 @@ export function DashboardPage() {
           value={tenders.filter((tender) => tender.status === 'PUBLICADA').length}
           detail="Licitaciones abiertas a proveedores"
           tone="amber"
+        />
+        <MetricCard
+          label="Consultas"
+          value={questions.length}
+          detail="Consultas recibidas de proveedores"
+          trend="En tiempo real"
+          tone="violet"
         />
       </section>
       <MiniBarChart
@@ -464,7 +475,7 @@ export function UsersRolesPage() {
                 { key: 'name', header: 'Rol', render: (row) => String(row.name) },
                 {
                   key: 'description',
-                  header: 'Descripcion',
+                  header: 'Descripción',
                   render: (row) => String(row.description ?? ''),
                 },
                 {
@@ -504,7 +515,7 @@ export function UsersRolesPage() {
                 <input {...roleForm.register('name', { required: true })} />
               </label>
               <label>
-                Descripcion
+                Descripción
                 <input {...roleForm.register('description')} />
               </label>
               <label>
@@ -562,7 +573,7 @@ export function SuppliersManagementPage() {
         rows={data}
         columns={[
           { key: 'ruc', header: 'RUC', render: (row) => String(row.ruc) },
-          { key: 'legalName', header: 'Razon social', render: (row) => String(row.legalName) },
+          { key: 'legalName', header: 'Razón social', render: (row) => String(row.legalName) },
           {
             key: 'status',
             header: 'Estado',
@@ -759,7 +770,7 @@ export function SupplierDetailPage() {
                 <div className="section-heading">
                   <div>
                     <h2>Editar datos del proveedor</h2>
-                    <p>Campos de facturacion y contactos registrados.</p>
+                    <p>Campos de facturación y contactos registrados.</p>
                   </div>
                 </div>
                 <form
@@ -781,18 +792,18 @@ export function SupplierDetailPage() {
                     />
                   </label>
                   <label>
-                    Razon social
+                    Razón social
                     <input
                       autoComplete="organization"
                       {...form.register('legalName', { required: true })}
                     />
                   </label>
                   <label>
-                    Correo de facturacion
+                    Correo de facturación
                     <input type="email" {...form.register('billingEmail', { required: true })} />
                   </label>
                   <label>
-                    Direccion de facturacion
+                    Dirección de facturación
                     <input {...form.register('billingAddress', { required: true })} />
                   </label>
                   <label>
@@ -814,7 +825,7 @@ export function SupplierDetailPage() {
                     />
                   </label>
                   <label>
-                    Cedula de identidad del representante
+                    Cédula de identidad del representante
                     <input
                       inputMode="numeric"
                       autoComplete="off"
@@ -826,7 +837,7 @@ export function SupplierDetailPage() {
                     <input type="email" autoComplete="email" {...form.register('contactEmail')} />
                   </label>
                   <label>
-                    Telefono
+                    Teléfono
                     <input type="hidden" {...form.register('phone')} />
                     <PhoneInput
                       value={form.watch('phone')}
@@ -841,7 +852,7 @@ export function SupplierDetailPage() {
                     Tiempo de trabajo con la empresa licitante
                     <input
                       {...form.register('clientRelationshipDuration')}
-                      placeholder="Ej.: 2 anos"
+                      placeholder="Ej.: 2 años"
                     />
                   </label>
                   <label>
@@ -891,7 +902,7 @@ export function SupplierDetailPage() {
                     </select>
                   </label>
                   <label>
-                    Descripcion breve
+                    Descripción breve
                     <input
                       value={documentDescription}
                       onChange={(event) => setDocumentDescription(event.target.value)}
@@ -937,7 +948,7 @@ export function SupplierDetailPage() {
                   },
                   {
                     key: 'description',
-                    header: 'Descripcion',
+                    header: 'Descripción',
                     render: (row) => String(row.description ?? '-'),
                   },
                   {
@@ -1077,14 +1088,14 @@ export function TendersManagementPage() {
   return (
     <>
       <PageHeader
-        title="Gestion de licitaciones"
+        title="Gestión de licitaciones"
         actions={
           <div className="toolbar-actions">
             <Link className="button primary" to="/internal/tenders/new">
-              <FilePlus size={18} /> Crear licitacion
+              <FilePlus size={18} /> Crear licitación
             </Link>
             <Link className="button ghost" to="/internal/tenders/categories">
-              Modificar categorias
+              Modificar categorías
             </Link>
             <Link className="button ghost" to="/internal/tenders/branches">
               Modificar sucursales
@@ -1095,8 +1106,8 @@ export function TendersManagementPage() {
       <DataTable
         rows={data}
         columns={[
-          { key: 'code', header: 'Codigo', render: (row) => displayTenderCode(row.code) },
-          { key: 'title', header: 'Titulo', render: (row) => row.title },
+          { key: 'code', header: 'Código', render: (row) => displayTenderCode(row.code) },
+          { key: 'title', header: 'Título', render: (row) => row.title },
           { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={row.status} /> },
           { key: 'deadline', header: 'Cierre', render: (row) => formatPyDate(row.bidDeadline) },
           {
@@ -1179,7 +1190,7 @@ export function TenderCreateEditPage() {
       currency: 'PYG',
       vatIncluded: true,
       paymentMethod: 'CONTADO',
-      paymentTerms: '30 dias',
+      paymentTerms: '30 días',
     },
   });
   const [questionEdited, setQuestionEdited] = useState(false);
@@ -1230,7 +1241,7 @@ export function TenderCreateEditPage() {
     setSubmitError('');
     const validItems = items.filter((item) => item.description.trim() && Number(item.quantity) > 0);
     if (validItems.length === 0) {
-      setSubmitError('Agregue al menos un item con descripcion y cantidad valida.');
+      setSubmitError('Agregue al menos un ítem con descripción y cantidad válida.');
       return;
     }
     try {
@@ -1251,7 +1262,7 @@ export function TenderCreateEditPage() {
           values.paymentMethod === 'CREDITO'
             ? values.paymentTerms === 'PERSONALIZADO'
               ? values.customCreditDays
-                ? values.customCreditDays + ' dias'
+                ? values.customCreditDays + ' días'
                 : undefined
               : values.paymentTerms
             : undefined,
@@ -1298,7 +1309,7 @@ export function TenderCreateEditPage() {
       setSubmitError(
         error instanceof Error
           ? error.message
-          : 'No se pudo guardar la licitacion. Revise los datos e intente nuevamente.',
+          : 'No se pudo guardar la licitación. Revise los datos e intente nuevamente.',
       );
     }
   }
@@ -1328,8 +1339,8 @@ export function TenderCreateEditPage() {
   return (
     <>
       <PageHeader
-        title="Crear licitacion"
-        description="Formato estandar con datos generales, fechas e items del proceso."
+        title="Crear licitación"
+        description="Formato estándar con datos generales, fechas e ítems del proceso."
       />
       <section className="panel">
         <form
@@ -1339,11 +1350,11 @@ export function TenderCreateEditPage() {
           )}
         >
           <label>
-            Codigo
-            <input value="Se genera automaticamente" disabled />
+            Código
+            <input value="Se genera automáticamente" disabled />
           </label>
           <label>
-            Titulo
+            Título
             <input {...register('title', { required: true })} />
           </label>
           <label>
@@ -1363,7 +1374,7 @@ export function TenderCreateEditPage() {
             <small>Autocompletado, editable</small>
           </label>
           <label>
-            Categoria
+            Categoría
             <select {...register('categoryId', { required: true })}>
               <option value="">Seleccionar...</option>
               {categories.map((category) => (
@@ -1378,7 +1389,7 @@ export function TenderCreateEditPage() {
             <input type="email" {...register('responsibleEmail', { required: true })} />
           </label>
           <label>
-            Area solicitante
+            Área solicitante
             <select {...register('requestingAreaId', { required: true })}>
               <option value="">Seleccionar...</option>
               {activeAreas.map((area) => (
@@ -1398,7 +1409,7 @@ export function TenderCreateEditPage() {
                 onChange: () => setQuestionEdited(true),
               })}
             />
-            <small>Autocompletado (+15 dias), editable</small>
+            <small>Autocompletado (+15 días), editable</small>
           </label>
           <label>
             Limite respuestas
@@ -1410,27 +1421,27 @@ export function TenderCreateEditPage() {
               type="date"
               {...register('bidDeadline', { required: true, onChange: () => setBidEdited(true) })}
             />
-            <small>Autocompletado (+30 dias), editable</small>
+            <small>Autocompletado (+30 días), editable</small>
           </label>
           <label className="full">
-            Descripcion
+            Descripción
             <textarea {...register('description', { required: true })} />
           </label>
           <div className="full line-items">
             <div className="section-heading">
               <div>
-                <h2>Items de la licitacion</h2>
-                <p>Agregue cada item con sus especificaciones y condiciones requeridas.</p>
+                <h2>Ítems de la licitación</h2>
+                <p>Agregue cada ítem con sus especificaciones y condiciones requeridas.</p>
               </div>
               <button className="button ghost" type="button" onClick={addItem}>
-                <Plus size={16} /> Agregar item
+                <Plus size={16} /> Agregar ítem
               </button>
             </div>
             <div className="line-items-table">
               <div className="line-items-head">
-                <span>Descripcion</span>
+                <span>Descripción</span>
                 <span>Cantidad</span>
-                <span>Especificaciones tecnicas</span>
+                <span>Especificaciones técnicas</span>
                 <span>Marcas de referencia</span>
                 <span>Permite equivalente</span>
                 <span>Garantia minima</span>
@@ -1471,7 +1482,7 @@ export function TenderCreateEditPage() {
                         updateItem(index, 'allowsEquivalent', event.target.checked)
                       }
                     />
-                    <span>Si</span>
+                    <span>Sí</span>
                   </label>
                   <input
                     value={item.minimumWarranty}
@@ -1486,14 +1497,14 @@ export function TenderCreateEditPage() {
                         updateItem(index, 'warrantyDocumentRequired', event.target.checked)
                       }
                     />
-                    <span>Si</span>
+                    <span>Sí</span>
                   </label>
                   {isAdmin && (
                     <button
                       className="item-remove"
                       type="button"
                       onClick={() => removeItem(index)}
-                      title="Quitar item"
+                      title="Quitar ítem"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -1522,7 +1533,7 @@ export function TenderCreateEditPage() {
                 Forma de pago
                 <select {...register('paymentMethod')}>
                   <option value="CONTADO">Contado</option>
-                  <option value="CREDITO">Credito</option>
+                  <option value="CREDITO">Crédito</option>
                 </select>
               </label>
               {watch('paymentMethod') === 'CREDITO' && (
@@ -1530,9 +1541,9 @@ export function TenderCreateEditPage() {
                   <label>
                     Condiciones de cr\u00e9dito (desde la emisi\u00f3n de la factura)
                     <select {...register('paymentTerms')}>
-                      <option value="7 dias">7 dias</option>
-                      <option value="15 dias">15 dias</option>
-                      <option value="30 dias">30 dias</option>
+                      <option value="7 días">7 días</option>
+                      <option value="15 días">15 días</option>
+                      <option value="30 días">30 días</option>
                       <option value="PERSONALIZADO">Personalizado</option>
                     </select>
                   </label>
@@ -1549,7 +1560,7 @@ export function TenderCreateEditPage() {
           <div className="full">
             <h2>Adjuntos</h2>
             <label>
-              Fotos / planos de referencia (max. 2 MB por archivo)
+              Fotos / planos de referencia (máx. 2 MB por archivo)
               <input
                 type="file"
                 multiple
@@ -1593,10 +1604,10 @@ export function TenderCreateEditPage() {
           <section className="modal success-modal">
             <div className="modal-title success-title">
               <Check size={22} />
-              <h2 id="save-success-title">Licitacion guardada</h2>
+              <h2 id="save-success-title">Licitación guardada</h2>
             </div>
             <p>
-              La licitacion <strong>{displayTenderCode(savedTender.code)}</strong> fue guardada
+              La licitación <strong>{displayTenderCode(savedTender.code)}</strong> fue guardada
               correctamente.
             </p>
             <div className="modal-actions">
@@ -1642,17 +1653,17 @@ function previewTenderA4(data: TenderDetailData) {
             `<tr><td>${index + 1}</td><td>${escapePrintHtml(item.description)}</td><td>${escapePrintHtml(item.quantity)}</td><td>${escapePrintHtml(item.specs ?? '-')}</td><td>${escapePrintHtml(item.referenceBrandModel ?? '-')}</td></tr>`,
         )
         .join('')
-    : '<tr><td colspan="5">Sin items registrados.</td></tr>';
+    : '<tr><td colspan="5">Sin ítems registrados.</td></tr>';
   const attachmentRows = data.documents?.length
     ? data.documents
         .map(
           (document, index) =>
-            `<tr><td>${index + 1}</td><td>${escapePrintHtml(document.title)}</td><td>${escapePrintHtml(document.type)}</td><td>Version ${escapePrintHtml(document.version)}</td></tr>`,
+            `<tr><td>${index + 1}</td><td>${escapePrintHtml(document.title)}</td><td>${escapePrintHtml(document.type)}</td><td>Versión ${escapePrintHtml(document.version)}</td></tr>`,
         )
         .join('')
     : '<tr><td colspan="4">Sin adjuntos registrados.</td></tr>';
   printWindow.document.write(
-    `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapePrintHtml(displayTenderCode(data.code))} - ${escapePrintHtml(data.title)}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font:10pt Arial,sans-serif;color:#17231e}h1{font-size:20pt;margin:0 0 3px}h2{font-size:12pt;color:#146c5c;border-bottom:1px solid #bdd7cf;padding-bottom:4px;margin:19px 0 8px}.sub{color:#52706a;margin:0}.meta{margin:18px 0;border:1px solid #d7e1dc;border-collapse:collapse;width:100%}.meta th,.meta td{padding:6px 8px;border:1px solid #d7e1dc;text-align:left}.meta th{width:31%;background:#f0f6f3}table{border-collapse:collapse;width:100%;margin-top:8px}thead{background:#146c5c;color:#fff}th,td{border:1px solid #d7e1dc;padding:6px;text-align:left;vertical-align:top}.footer{border-top:1px solid #d7e1dc;margin-top:18px;padding-top:6px;color:#52706a;font-size:8pt}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><h1>Expediente de licitacion</h1><p class="sub">${escapePrintHtml(displayTenderCode(data.code))} · ${escapePrintHtml(data.title)}</p><h2>Datos generales</h2><table class="meta">${detail('Sucursal', data.branch?.name)}${detail('Categoria', data.category?.name)}${detail('Area solicitante', data.requestingArea ? `${data.requestingArea.code ? data.requestingArea.code + ' - ' : ''}${data.requestingArea.name}` : '-')}${detail('Responsable', data.responsibleEmail)}${detail('Estado', data.status)}${detail('Descripcion', data.description)}</table><h2>Fechas y condiciones</h2><table class="meta">${detail('Fecha base', formatPyDate(data.publishedAt))}${detail('Limite de consultas', formatPyDate(data.questionDeadline))}${detail('Limite de respuestas', formatPyDate(data.responseDeadline))}${detail('Limite de ofertas', formatPyDate(data.bidDeadline))}${detail('Moneda', data.currency === 'USD' ? 'USD' : 'Guaranies (Gs.)')}${detail('IVA incluido', data.vatIncluded ? 'Si' : 'No')}${detail('Forma de pago', data.paymentMethod === 'CREDITO' ? 'Credito' : 'Contado')}${detail('Condiciones de credito', data.paymentMethod === 'CREDITO' ? data.paymentTerms : '-')}</table><h2>Items solicitados</h2><table><thead><tr><th>#</th><th>Descripcion</th><th>Cantidad</th><th>Especificaciones</th><th>Marca / modelo de referencia</th></tr></thead><tbody>${itemRows}</tbody></table><h2>Adjuntos</h2><table><thead><tr><th>#</th><th>Archivo</th><th>Tipo</th><th>Referencia</th></tr></thead><tbody>${attachmentRows}</tbody></table><p class="footer">Documento generado desde LICI el ${escapePrintHtml(formatPyDateTime(new Date()))}. Los adjuntos quedan identificados como parte integrante del expediente.</p></body></html>`,
+    `<!doctype html><html lang="es-PY"><head><meta charset="utf-8"><title>${escapePrintHtml(displayTenderCode(data.code))} - ${escapePrintHtml(data.title)}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font:10pt "Segoe UI",Arial,sans-serif;color:#17231e}h1{font-size:20pt;margin:0 0 3px}h2{font-size:12pt;color:#146c5c;border-bottom:1px solid #bdd7cf;padding-bottom:4px;margin:19px 0 8px}.sub{color:#52706a;margin:0}.meta{margin:18px 0;border:1px solid #d7e1dc;border-collapse:collapse;width:100%}.meta th,.meta td{padding:6px 8px;border:1px solid #d7e1dc;text-align:left}.meta th{width:31%;background:#f0f6f3}table{border-collapse:collapse;width:100%;margin-top:8px}thead{background:#146c5c;color:#fff}th,td{border:1px solid #d7e1dc;padding:6px;text-align:left;vertical-align:top}.footer{border-top:1px solid #d7e1dc;margin-top:18px;padding-top:6px;color:#52706a;font-size:8pt}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><h1>Expediente de licitación</h1><p class="sub">${escapePrintHtml(displayTenderCode(data.code))} · ${escapePrintHtml(data.title)}</p><h2>Datos generales</h2><table class="meta">${detail('Sucursal', data.branch?.name)}${detail('Categoría', data.category?.name)}${detail('Área solicitante', data.requestingArea ? `${data.requestingArea.code ? data.requestingArea.code + ' - ' : ''}${data.requestingArea.name}` : '-')}${detail('Responsable', data.responsibleEmail)}${detail('Estado', data.status)}${detail('Descripción', data.description)}</table><h2>Fechas y condiciones</h2><table class="meta">${detail('Fecha base', formatPyDate(data.publishedAt))}${detail('Límite de consultas', formatPyDate(data.questionDeadline))}${detail('Límite de respuestas', formatPyDate(data.responseDeadline))}${detail('Límite de ofertas', formatPyDate(data.bidDeadline))}${detail('Moneda', data.currency === 'USD' ? 'USD' : 'Guaraníes (Gs.)')}${detail('IVA incluido', data.vatIncluded ? 'Sí' : 'No')}${detail('Forma de pago', data.paymentMethod === 'CREDITO' ? 'Crédito' : 'Contado')}${detail('Condiciones de crédito', data.paymentMethod === 'CREDITO' ? data.paymentTerms : '-')}</table><h2>Ítems solicitados</h2><table><thead><tr><th>#</th><th>Descripción</th><th>Cantidad</th><th>Especificaciones</th><th>Marca / modelo de referencia</th></tr></thead><tbody>${itemRows}</tbody></table><h2>Adjuntos</h2><table><thead><tr><th>#</th><th>Archivo</th><th>Tipo</th><th>Referencia</th></tr></thead><tbody>${attachmentRows}</tbody></table><p class="footer">Documento generado desde LICI el ${escapePrintHtml(formatPyDateTime(new Date()))}. Los adjuntos quedan identificados como parte integrante del expediente.</p></body></html>`,
   );
   printWindow.document.close();
   printWindow.focus();
@@ -1681,7 +1692,7 @@ export function TenderDetailInternalPage() {
   return (
     <>
       <PageHeader
-        title={data?.title ?? 'Licitacion'}
+        title={data?.title ?? 'Licitación'}
         description={data ? displayTenderCode(data.code) : ''}
         actions={
           <div className="row-actions">
@@ -1715,7 +1726,7 @@ export function TenderDetailInternalPage() {
               </button>
             )}
             <Link className="button ghost" to="/internal/awards">
-              Ir a decision
+              Ir a decisión
             </Link>
             {isAdmin && (
               <button
@@ -1747,13 +1758,13 @@ export function TenderDetailInternalPage() {
               {data.status && <StatusBadge status={data.status} />}
             </div>
             <dl className="detail-grid">
-              <dt>Codigo</dt>
+              <dt>Código</dt>
               <dd>{displayTenderCode(data.code)}</dd>
               <dt>Sucursal</dt>
               <dd>{data.branch?.name ?? '-'}</dd>
-              <dt>Categoria</dt>
+              <dt>Categoría</dt>
               <dd>{data.category?.name ?? '-'}</dd>
-              <dt>Area solicitante</dt>
+              <dt>Área solicitante</dt>
               <dd>
                 {data.requestingArea
                   ? (data.requestingArea.code ? data.requestingArea.code + ' - ' : '') +
@@ -1762,7 +1773,7 @@ export function TenderDetailInternalPage() {
               </dd>
               <dt>Responsable</dt>
               <dd>{data.responsibleEmail ?? '-'}</dd>
-              <dt>Descripcion</dt>
+              <dt>Descripción</dt>
               <dd>{data.description}</dd>
             </dl>
           </section>
@@ -1785,10 +1796,10 @@ export function TenderDetailInternalPage() {
               <dt>Moneda</dt>
               <dd>{data.currency === 'USD' ? 'USD' : 'Gs.'}</dd>
               <dt>IVA incluido</dt>
-              <dd>{data.vatIncluded ? 'Si' : 'No'}</dd>
+              <dd>{data.vatIncluded ? 'Sí' : 'No'}</dd>
               <dt>Forma de pago</dt>
-              <dd>{data.paymentMethod === 'CREDITO' ? 'Credito' : 'Contado'}</dd>
-              <dt>Condiciones de credito</dt>
+              <dd>{data.paymentMethod === 'CREDITO' ? 'Crédito' : 'Contado'}</dd>
+              <dt>Condiciones de crédito</dt>
               <dd>{data.paymentMethod === 'CREDITO' ? (data.paymentTerms ?? '-') : '-'}</dd>
             </dl>
           </section>
@@ -1799,9 +1810,9 @@ export function TenderDetailInternalPage() {
                 <table className="detail-items">
                   <thead>
                     <tr>
-                      <th>Descripcion</th>
+                      <th>Descripción</th>
                       <th>Cantidad</th>
-                      <th>Especificaciones tecnicas</th>
+                      <th>Especificaciones técnicas</th>
                       <th>Marca de referencia</th>
                       <th>Equivalente</th>
                       <th>Garantia minima</th>
@@ -1815,16 +1826,16 @@ export function TenderDetailInternalPage() {
                         <td>{String(item.quantity)}</td>
                         <td>{item.specs ?? '-'}</td>
                         <td>{item.referenceBrandModel ?? '-'}</td>
-                        <td>{item.allowsEquivalent ? 'Si' : 'No'}</td>
+                        <td>{item.allowsEquivalent ? 'Sí' : 'No'}</td>
                         <td>{item.minimumWarranty ?? '-'}</td>
-                        <td>{item.warrantyDocumentRequired ? 'Si' : 'No'}</td>
+                        <td>{item.warrantyDocumentRequired ? 'Sí' : 'No'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p>Sin items registrados.</p>
+              <p>Sin ítems registrados.</p>
             )}
           </section>
           <section className="panel tender-detail">
@@ -1860,7 +1871,7 @@ export function QuestionsInboxPage() {
         columns={[
           {
             key: 'tenderId',
-            header: 'Licitacion',
+            header: 'Licitación',
             render: (row) => {
               const tender = row.tender as { code?: string; title?: string } | undefined;
               return tender?.code ? displayTenderCode(tender.code) + ' - ' + tender.title : '-';
@@ -2015,7 +2026,7 @@ export function BidsInboxPage() {
         columns={[
           {
             key: 'tenderId',
-            header: 'Licitacion',
+            header: 'Licitación',
             render: (row) => (row.tender?.code ? displayTenderCode(row.tender.code) : '-'),
           },
           {
@@ -2063,7 +2074,7 @@ export function BidsInboxPage() {
       <ConfirmDialog
         open={Boolean(bidToDelete)}
         title="Eliminar oferta"
-        message="La oferta dejara de estar disponible y el proveedor podra volver a ofertar en esta licitacion. Desea continuar?"
+        message="La oferta dejará de estar disponible y el proveedor podrá volver a ofertar en esta licitación. ¿Desea continuar?"
         confirmLabel="Eliminar"
         onClose={() => setBidToDelete(null)}
         onConfirm={() => {
@@ -2115,9 +2126,9 @@ function previewBidA4(data: InternalBidDetail) {
         (item, index) =>
           `<tr><td>${index + 1}</td><td>${esc(item.description)}</td><td>${esc(item.quantity)}</td><td>${esc(formatMoney(item.unitPrice, data.currency))}</td><td>${esc(formatMoney(item.total, data.currency))}</td><td>${esc(item.brand ?? '-')}</td><td>${esc(item.model ?? '-')}</td></tr>`,
       )
-      .join('') ?? '<tr><td colspan="7">Sin items.</td></tr>';
+      .join('') ?? '<tr><td colspan="7">Sin ítems.</td></tr>';
   win.document.write(
-    `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Oferta ${esc(data.receiptCode)}</title><style>@page{size:A4;margin:16mm}body{font:10pt Arial;color:#17231e}h1{margin:0;color:#146c5c;font-size:20pt}h2{font-size:12pt;border-bottom:1px solid #bdd7cf;padding-bottom:4px;margin-top:20px}table{border-collapse:collapse;width:100%;margin-top:8px}th,td{border:1px solid #d7e1dc;padding:6px;text-align:left;vertical-align:top}th{background:#edf4f1}.items thead th{background:#146c5c;color:#fff}.sub{color:#52706a}.foot{margin-top:18px;font-size:8pt;color:#52706a}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><h1>Oferta presentada</h1><p class="sub">${esc(data.receiptCode)} · ${esc(data.tender?.code ? displayTenderCode(data.tender.code) : '-')}</p><h2>Resumen</h2><table><tr><th>Proveedor</th><td>${esc(data.supplier ? data.supplier.ruc + ' - ' + data.supplier.legalName : '-')}</td></tr><tr><th>Licitacion</th><td>${esc(data.tender ? displayTenderCode(data.tender.code) + ' - ' + data.tender.title : '-')}</td></tr><tr><th>Fecha de envio</th><td>${esc(formatPyDateTime(data.submittedAt))}</td></tr><tr><th>Total</th><td>${esc(formatMoney(data.totalAmount, data.currency))}</td></tr><tr><th>Pago</th><td>${esc(data.paymentTerms)}</td></tr><tr><th>Entrega</th><td>${esc(data.deliveryTerms)}</td></tr></table><h2>Items ofertados</h2><table class="items"><thead><tr><th>#</th><th>Item</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th><th>Marca</th><th>Modelo</th></tr></thead><tbody>${rows}</tbody></table><p class="foot">Documento generado el ${esc(formatPyDateTime(new Date()))}.</p></body></html>`,
+    `<!doctype html><html lang="es-PY"><head><meta charset="utf-8"><title>Oferta ${esc(data.receiptCode)}</title><style>@page{size:A4;margin:16mm}body{font:10pt "Segoe UI",Arial,sans-serif;color:#17231e}h1{margin:0;color:#146c5c;font-size:20pt}h2{font-size:12pt;border-bottom:1px solid #bdd7cf;padding-bottom:4px;margin-top:20px}table{border-collapse:collapse;width:100%;margin-top:8px}th,td{border:1px solid #d7e1dc;padding:6px;text-align:left;vertical-align:top}th{background:#edf4f1}.items thead th{background:#146c5c;color:#fff}.sub{color:#52706a}.foot{margin-top:18px;font-size:8pt;color:#52706a}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><h1>Oferta presentada</h1><p class="sub">${esc(data.receiptCode)} · ${esc(data.tender?.code ? displayTenderCode(data.tender.code) : '-')}</p><h2>Resumen</h2><table><tr><th>Proveedor</th><td>${esc(data.supplier ? data.supplier.ruc + ' - ' + data.supplier.legalName : '-')}</td></tr><tr><th>Licitación</th><td>${esc(data.tender ? displayTenderCode(data.tender.code) + ' - ' + data.tender.title : '-')}</td></tr><tr><th>Fecha de envío</th><td>${esc(formatPyDateTime(data.submittedAt))}</td></tr><tr><th>Total</th><td>${esc(formatMoney(data.totalAmount, data.currency))}</td></tr><tr><th>Pago</th><td>${esc(data.paymentTerms)}</td></tr><tr><th>Entrega</th><td>${esc(data.deliveryTerms)}</td></tr></table><h2>Ítems ofertados</h2><table class="items"><thead><tr><th>#</th><th>Ítem</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th><th>Marca</th><th>Modelo</th></tr></thead><tbody>${rows}</tbody></table><p class="foot">Documento generado el ${esc(formatPyDateTime(new Date()))}.</p></body></html>`,
   );
   win.document.close();
   win.focus();
@@ -2169,7 +2180,7 @@ export function BidDetailInternalPage() {
             <dl className="detail-grid">
               <dt>Oferta</dt>
               <dd>{data.receiptCode ?? '-'}</dd>
-              <dt>Licitacion</dt>
+              <dt>Licitación</dt>
               <dd>
                 {data.tender
                   ? displayTenderCode(data.tender.code) + ' - ' + data.tender.title
@@ -2215,7 +2226,7 @@ export function BidDetailInternalPage() {
                         <td>{formatMoney(item.total, data.currency)}</td>
                         <td>{item.brand ?? '-'}</td>
                         <td>{item.model ?? '-'}</td>
-                        <td>{item.pendingApproval ? 'Pendiente' : 'Incluido en licitacion'}</td>
+                        <td>{item.pendingApproval ? 'Pendiente' : 'Incluido en licitación'}</td>
                         <td>{item.notes ?? '-'}</td>
                       </tr>
                     ))}
@@ -2223,7 +2234,7 @@ export function BidDetailInternalPage() {
                 </table>
               </div>
             ) : (
-              <p>Sin items.</p>
+              <p>Sin ítems.</p>
             )}
           </section>
         </>
@@ -2478,7 +2489,7 @@ export function AwardCancelDesertPage() {
       <PageHeader title="Adjudicar, cancelar o declarar desierta" />
       <section className="panel">
         <div className="search-field">
-          <label>Buscar por ID/Codigo/RUC/Nombre</label>
+          <label>Buscar por ID/Código/RUC/Nombre</label>
           <div className="search-row">
             <div className="autocomplete-field">
               <input
@@ -2512,7 +2523,7 @@ export function AwardCancelDesertPage() {
           <div className="resolve-preview">
             {resolveResult.tender && (
               <div className="preview-row">
-                <strong>Licitacion:</strong> {displayTenderCode(resolveResult.tender.code)} -{' '}
+                <strong>Licitación:</strong> {displayTenderCode(resolveResult.tender.code)} -{' '}
                 {resolveResult.tender.title}
               </div>
             )}
@@ -2600,7 +2611,7 @@ export function AwardCancelDesertPage() {
             </select>
           </label>
           <label>
-            Licitacion ID
+            Licitación ID
             <input type="hidden" {...register('tenderId', { required: true })} />
             <div className="autocomplete-field">
               <input
@@ -2660,7 +2671,7 @@ export function AwardCancelDesertPage() {
                     : event.target.value.replace(/\D/g, '');
                 setValue('amount', Number(raw) || 0, { shouldDirty: true });
               }}
-              aria-label={decisionCurrency === 'USD' ? 'Monto en USD' : 'Monto en guaranies'}
+              aria-label={decisionCurrency === 'USD' ? 'Monto en USD' : 'Monto en guaraníes'}
             />
           </label>
           <label className="full">
@@ -2669,7 +2680,7 @@ export function AwardCancelDesertPage() {
           </label>
           <div className="form-actions">
             <button className="button danger" type="submit">
-              Registrar decision
+              Registrar decisión
             </button>
             <button className="button ghost" type="button" onClick={() => navigate(-1)}>
               Cancelar
@@ -2681,49 +2692,66 @@ export function AwardCancelDesertPage() {
   );
 }
 
-export function ExpedientePage() {
-  const [tenderId, setTenderId] = useState('');
-  const { data } = useQuery({
-    queryKey: ['expediente', tenderId],
-    queryFn: () => api.get<Row>(`/reports/tenders/${tenderId}/expediente`),
-    enabled: tenderId.length > 0,
-  });
-
-  return (
-    <>
-      <PageHeader title="Expediente" />
-      <section className="panel">
-        <TenderSelector value={tenderId} onChange={(id) => setTenderId(id)} label="Licitacion" />
-        <pre className="json-preview">
-          {data ? JSON.stringify(data, null, 2) : 'Ingrese una licitacion.'}
-        </pre>
-      </section>
-    </>
-  );
-}
-
 export function AuditLogsPage() {
-  const { data = [] } = useQuery({
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') === 'expediente' ? 'expediente' : 'logs';
+  const [tenderId, setTenderId] = useState('');
+  const { data: logs = [] } = useQuery({
     queryKey: ['audit-logs'],
     queryFn: () => api.get<Row[]>('/audit-logs'),
+    enabled: activeTab === 'logs',
+  });
+  const { data: expediente } = useQuery({
+    queryKey: ['expediente', tenderId],
+    queryFn: () => api.get<Row>(`/reports/tenders/${tenderId}/expediente`),
+    enabled: activeTab === 'expediente' && tenderId.length > 0,
   });
 
   return (
     <>
-      <PageHeader title="Auditoria" />
-      <DataTable
-        rows={data}
-        columns={[
-          { key: 'createdAt', header: 'Fecha', render: (row) => String(row.createdAt) },
-          { key: 'action', header: 'Accion', render: (row) => String(row.action) },
-          { key: 'entity', header: 'Entidad', render: (row) => String(row.entity) },
-          {
-            key: 'result',
-            header: 'Resultado',
-            render: (row) => <StatusBadge status={String(row.result)} />,
-          },
-        ]}
-      />
+      <PageHeader title="Auditoría" description="Trazabilidad de acciones y expedientes." />
+      <div className="tabs" role="tablist" aria-label="Secciones de auditoría">
+        <button
+          className={'button ghost ' + (activeTab === 'logs' ? 'active' : '')}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'logs'}
+          onClick={() => setSearchParams({})}
+        >
+          Logs
+        </button>
+        <button
+          className={'button ghost ' + (activeTab === 'expediente' ? 'active' : '')}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'expediente'}
+          onClick={() => setSearchParams({ tab: 'expediente' })}
+        >
+          Expediente
+        </button>
+      </div>
+      {activeTab === 'logs' ? (
+        <DataTable
+          rows={logs}
+          columns={[
+            { key: 'createdAt', header: 'Fecha', render: (row) => String(row.createdAt) },
+            { key: 'action', header: 'Acción', render: (row) => String(row.action) },
+            { key: 'entity', header: 'Entidad', render: (row) => String(row.entity) },
+            {
+              key: 'result',
+              header: 'Resultado',
+              render: (row) => <StatusBadge status={String(row.result)} />,
+            },
+          ]}
+        />
+      ) : (
+        <section className="panel">
+          <TenderSelector value={tenderId} onChange={(id) => setTenderId(id)} label="Licitación" />
+          <pre className="json-preview">
+            {expediente ? JSON.stringify(expediente, null, 2) : 'Ingrese una licitación.'}
+          </pre>
+        </section>
+      )}
     </>
   );
 }
@@ -2792,7 +2820,7 @@ export function RequestingAreasPage() {
     <>
       <PageHeader
         title="Areas solicitantes"
-        description="Administre las areas que solicitan licitaciones."
+        description="Administre las áreas que solicitan licitaciones."
         actions={
           <button className="button primary" type="button" onClick={startCreate}>
             <Plus size={16} /> Agregar area
@@ -2819,7 +2847,7 @@ export function RequestingAreasPage() {
           >
             {editingArea && (
               <label>
-                Codigo auditable
+                Código auditable
                 <input {...register('code')} />
               </label>
             )}
@@ -2828,7 +2856,7 @@ export function RequestingAreasPage() {
               <input {...register('name', { required: true })} />
             </label>
             <label className="full">
-              Descripcion
+              Descripción
               <input {...register('description')} />
             </label>
             <button className="button primary" type="submit">
@@ -2848,11 +2876,11 @@ export function RequestingAreasPage() {
       <DataTable
         rows={data}
         columns={[
-          { key: 'code', header: 'Codigo', render: (row) => String(row.code ?? '-') },
+          { key: 'code', header: 'Código', render: (row) => String(row.code ?? '-') },
           { key: 'name', header: 'Nombre', render: (row) => String(row.name) },
           {
             key: 'description',
-            header: 'Descripcion',
+            header: 'Descripción',
             render: (row) => String(row.description ?? '-'),
           },
           {
@@ -3039,9 +3067,9 @@ function CatalogManagementPage({
 export function TenderCategoriesPage() {
   return (
     <CatalogManagementPage
-      title="Modificar categorias"
+      title="Modificar categorías"
       endpoint="/tender-categories"
-      singular="Categoria"
+      singular="Categoría"
     />
   );
 }

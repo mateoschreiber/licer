@@ -25,8 +25,8 @@ Resultado: layouts interno y proveedor consumen el mismo shell y todas las panta
 
 1. Acceso y registro: login, recuperación y alta de proveedor.
 2. Shells: navegación interna y del proveedor.
-3. Resumen y listados: dashboard, licitaciones, proveedores, consultas, ofertas, auditoría y comunicaciones.
-4. Detalles: proveedor, licitación, oferta, consulta, expediente y comprobante.
+3. Resumen y listados: dashboard, licitaciones, proveedores, consultas, ofertas y auditoría.
+4. Detalles: proveedor, licitación, oferta, consulta y comprobante; el expediente queda integrado en Auditoría.
 5. Formularios y CRUD: usuarios/roles, áreas, categorías, sucursales, licitación, oferta y perfil.
 6. Decisión: adjudicación, cancelación o declaración desierta.
 

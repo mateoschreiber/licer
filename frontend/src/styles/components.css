@@ -756,7 +756,7 @@
 /* Metrics and chart */
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-4);
   margin-bottom: var(--space-4);
 }
@@ -1567,6 +1567,10 @@
 
 /* Responsive */
 @media (max-width: 72rem) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .app-shell,
   .app-shell.sidebar-collapsed {
     grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);

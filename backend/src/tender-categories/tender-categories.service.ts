@@ -20,9 +20,9 @@ export class TenderCategoriesService {
   }
   async remove(id: string) {
     const c = await this.prisma.tenderCategory.findFirst({ where: { id, deletedAt: null } });
-    if (!c) throw new NotFoundException('Categoria no encontrada');
+    if (!c) throw new NotFoundException('Categoría no encontrada');
     if (await this.prisma.tender.count({ where: { categoryId: id, deletedAt: null } }))
-      throw new BadRequestException('Categoria en uso');
+      throw new BadRequestException('Categoría en uso');
     return this.prisma.tenderCategory.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 }

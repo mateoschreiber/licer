@@ -36,6 +36,9 @@ for (const file of sourceFiles) {
   if (/from ['"](?:react-icons|@fortawesome|@heroicons)/.test(source)) {
     errors.push(`${relative(root, file)} incorpora una segunda librería de iconos`);
   }
+  if (/Ã|Â|�/.test(source)) {
+    errors.push(`${relative(root, file)} contiene texto con codificación dañada`);
+  }
 }
 
 const stylesEntry = readFileSync(join(frontend, 'styles.css'), 'utf8');
@@ -73,7 +76,7 @@ for (const route of requiredRoutes) {
   if (!app.includes(`path="${route}"`)) errors.push(`Falta la ruta ${route}`);
 }
 if (!app.includes('path="*"')) errors.push('Falta la página 404');
-if (routeCount < 38) errors.push(`Solo se detectaron ${routeCount} declaraciones de ruta`);
+if (routeCount < 37) errors.push(`Solo se detectaron ${routeCount} declaraciones de ruta`);
 
 for (const removedRoute of [
   'path="evaluation/documental"',
@@ -86,6 +89,9 @@ for (const removedRoute of [
 
 if (app.includes('DocumentsAddendasPage')) {
   errors.push('El módulo administrativo de documentos y adendas sigue declarado');
+}
+if (app.includes('CommunicationsPage') || app.includes('path="communications"')) {
+  errors.push('El módulo de comunicaciones sigue declarado');
 }
 
 for (const layout of [

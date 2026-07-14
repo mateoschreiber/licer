@@ -13,6 +13,8 @@ import { RegisterSupplierDto } from './dto/register-supplier.dto';
 import { SupplierActionDto } from './dto/supplier-action.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
 import { CreateSupplierDocumentDto } from './dto/create-supplier-document.dto';
+import { CreateSupplierStaffDto } from './dto/create-supplier-staff.dto';
+import { UpdateSupplierStaffDto } from './dto/update-supplier-staff.dto';
 
 @Injectable()
 export class SuppliersService {
@@ -107,7 +109,7 @@ export class SuppliersService {
 
   async findMine(user: AuthenticatedUser) {
     if (!user.supplierId) {
-      throw new ForbiddenException('Supplier user required');
+      throw new ForbiddenException('Se requiere un usuario proveedor');
     }
 
     return this.findOne(user.supplierId);
@@ -125,7 +127,7 @@ export class SuppliersService {
       },
     });
     if (!supplier) {
-      throw new NotFoundException('Supplier not found');
+      throw new NotFoundException('Proveedor no encontrado');
     }
     return supplier;
   }
@@ -134,11 +136,11 @@ export class SuppliersService {
     const own = user.roles.includes('PROVEEDOR');
     const targetId = own ? user.supplierId : id;
     if (!targetId || (own && targetId !== id))
-      throw new ForbiddenException('Supplier ownership mismatch');
+      throw new ForbiddenException('El recurso no pertenece al proveedor');
     const existing = await this.prisma.supplier.findFirst({
       where: { id: targetId, deletedAt: null },
     });
-    if (!existing) throw new NotFoundException('Supplier not found');
+    if (!existing) throw new NotFoundException('Proveedor no encontrado');
     const data = { ...dto };
     if ('legalRepresentativeFirstName' in dto || 'legalRepresentativeLastName' in dto) {
       data.legalRepresentative =
@@ -160,21 +162,13 @@ export class SuppliersService {
     });
   }
 
-  async createMyUser(
-    dto: {
-      firstName: string;
-      lastName: string;
-      phone?: string;
-      phoneCountry?: string;
-      title?: string;
-    },
-    user: AuthenticatedUser,
-  ) {
+  async createMyUser(dto: CreateSupplierStaffDto, user: AuthenticatedUser) {
     return this.prisma.supplierStaff.create({
       data: {
         supplierId: this.requireSupplierId(user),
         firstName: dto.firstName,
         lastName: dto.lastName,
+        documentId: dto.documentId,
         phone: dto.phone,
         phoneCountry: dto.phoneCountry,
         title: dto.title,
@@ -182,17 +176,7 @@ export class SuppliersService {
     });
   }
 
-  async updateMyUser(
-    id: string,
-    dto: {
-      firstName?: string;
-      lastName?: string;
-      phone?: string;
-      phoneCountry?: string;
-      title?: string;
-    },
-    user: AuthenticatedUser,
-  ) {
+  async updateMyUser(id: string, dto: UpdateSupplierStaffDto, user: AuthenticatedUser) {
     const staff = await this.findOwnedStaff(id, user);
     return this.prisma.supplierStaff.update({ where: { id: staff.id }, data: dto });
   }
@@ -269,7 +253,7 @@ export class SuppliersService {
 
   async addOwnDocument(dto: CreateSupplierDocumentDto, user: AuthenticatedUser) {
     if (!user.supplierId || !user.roles.includes('PROVEEDOR')) {
-      throw new ForbiddenException('Supplier user required');
+      throw new ForbiddenException('Se requiere un usuario proveedor');
     }
     const [supplier, file] = await Promise.all([
       this.prisma.supplier.findFirst({ where: { id: user.supplierId, deletedAt: null } }),
@@ -278,10 +262,10 @@ export class SuppliersService {
       }),
     ]);
     if (!supplier) {
-      throw new NotFoundException('Supplier not found');
+      throw new NotFoundException('Proveedor no encontrado');
     }
     if (!file) {
-      throw new NotFoundException('File not found');
+      throw new NotFoundException('Archivo no encontrado');
     }
 
     const document = await this.prisma.supplierDocument.create({
@@ -314,10 +298,10 @@ export class SuppliersService {
       this.prisma.fileObject.findFirst({ where: { id: dto.fileId, deletedAt: null } }),
     ]);
     if (!supplier) {
-      throw new NotFoundException('Supplier not found');
+      throw new NotFoundException('Proveedor no encontrado');
     }
     if (!file) {
-      throw new NotFoundException('File not found');
+      throw new NotFoundException('Archivo no encontrado');
     }
 
     const document = await this.prisma.supplierDocument.create({
@@ -343,7 +327,7 @@ export class SuppliersService {
 
   private requireSupplierId(user: AuthenticatedUser) {
     if (!user.supplierId || !user.roles.includes('PROVEEDOR'))
-      throw new ForbiddenException('Supplier user required');
+      throw new ForbiddenException('Se requiere un usuario proveedor');
     return user.supplierId;
   }
 
@@ -351,7 +335,7 @@ export class SuppliersService {
     const staff = await this.prisma.supplierStaff.findFirst({
       where: { id, supplierId: this.requireSupplierId(user), deletedAt: null },
     });
-    if (!staff) throw new NotFoundException('Supplier staff member not found');
+    if (!staff) throw new NotFoundException('Funcionario del proveedor no encontrado');
     return staff;
   }
 
@@ -360,7 +344,7 @@ export class SuppliersService {
       where: { id, supplierId, deletedAt: null, voidedAt: null },
       include: { file: true },
     });
-    if (!document) throw new NotFoundException('Supplier document not found');
+    if (!document) throw new NotFoundException('Documento del proveedor no encontrado');
     return document;
   }
 

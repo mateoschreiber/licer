@@ -25,3 +25,4 @@ compose.yml.bak*
 *.backup
 *.tar.gz
 *.sql
+!backend/prisma/migrations/**/*.sql

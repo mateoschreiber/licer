@@ -312,11 +312,11 @@ async function main() {
   });
 
   const defaultAreas = [
-    { code: 'ADM', name: 'Administracion', description: 'Area de Administracion General' },
-    { code: 'FIN', name: 'Finanzas', description: 'Area de Finanzas y Contabilidad' },
-    { code: 'SIS', name: 'Sistemas', description: 'Area de Sistemas y Tecnologia' },
-    { code: 'COM', name: 'Compras', description: 'Area de Compras y Abastecimiento' },
-    { code: 'OPE', name: 'Operaciones', description: 'Area de Operaciones' },
+    { code: 'ADM', name: 'Administración', description: 'Área de Administración General' },
+    { code: 'FIN', name: 'Finanzas', description: 'Área de Finanzas y Contabilidad' },
+    { code: 'SIS', name: 'Sistemas', description: 'Área de Sistemas y Tecnología' },
+    { code: 'COM', name: 'Compras', description: 'Área de Compras y Abastecimiento' },
+    { code: 'OPE', name: 'Operaciones', description: 'Área de Operaciones' },
   ];
 
   for (const area of defaultAreas) {

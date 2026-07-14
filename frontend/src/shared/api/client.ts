@@ -41,7 +41,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
           ? payload.message.join('. ')
           : String(payload.message)
         : response.status === 413
-          ? 'El archivo supera el limite maximo de 2 MB.'
+          ? 'El archivo supera el límite máximo de 2 MB.'
           : 'No se pudo completar la solicitud.';
     throw new ApiError(message, response.status, payload);
   }

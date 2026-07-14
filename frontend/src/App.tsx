@@ -73,9 +73,6 @@ const BidDetailInternalPage = lazy(() =>
 const AwardCancelDesertPage = lazy(() =>
   internalPages().then((module) => ({ default: module.AwardCancelDesertPage })),
 );
-const ExpedientePage = lazy(() =>
-  internalPages().then((module) => ({ default: module.ExpedientePage })),
-);
 const AuditLogsPage = lazy(() =>
   internalPages().then((module) => ({ default: module.AuditLogsPage })),
 );
@@ -112,9 +109,6 @@ const MyBidDetailPage = lazy(() =>
 );
 const SubmissionReceiptPage = lazy(() =>
   supplierPages().then((module) => ({ default: module.SubmissionReceiptPage })),
-);
-const CommunicationsPage = lazy(() =>
-  supplierPages().then((module) => ({ default: module.CommunicationsPage })),
 );
 
 const internalRoles = [
@@ -155,7 +149,6 @@ export function App() {
             <Route path="bids/new" element={<CreateBidPage />} />
             <Route path="bids/:id" element={<MyBidDetailPage />} />
             <Route path="receipt" element={<SubmissionReceiptPage />} />
-            <Route path="communications" element={<CommunicationsPage />} />
           </Route>
         </Route>
 
@@ -176,7 +169,10 @@ export function App() {
             <Route path="bids" element={<BidsInboxPage />} />
             <Route path="bids/:id" element={<BidDetailInternalPage />} />
             <Route path="awards" element={<AwardCancelDesertPage />} />
-            <Route path="expediente" element={<ExpedientePage />} />
+            <Route
+              path="expediente"
+              element={<Navigate to="/internal/audit?tab=expediente" replace />}
+            />
             <Route path="audit" element={<AuditLogsPage />} />
           </Route>
         </Route>

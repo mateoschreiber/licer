@@ -7,8 +7,10 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { CreateSupplierDocumentDto } from './dto/create-supplier-document.dto';
+import { CreateSupplierStaffDto } from './dto/create-supplier-staff.dto';
 import { RegisterSupplierDto } from './dto/register-supplier.dto';
 import { SupplierActionDto } from './dto/supplier-action.dto';
+import { UpdateSupplierStaffDto } from './dto/update-supplier-staff.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
 import { SuppliersService } from './suppliers.service';
 
@@ -44,13 +46,7 @@ export class SuppliersController {
   @Post('me/users')
   createMyUser(
     @Body()
-    dto: {
-      firstName: string;
-      lastName: string;
-      phone?: string;
-      phoneCountry?: string;
-      title?: string;
-    },
+    dto: CreateSupplierStaffDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.suppliersService.createMyUser(dto, user);
@@ -61,13 +57,7 @@ export class SuppliersController {
   updateMyUser(
     @Param('userId') userId: string,
     @Body()
-    dto: {
-      firstName?: string;
-      lastName?: string;
-      phone?: string;
-      phoneCountry?: string;
-      title?: string;
-    },
+    dto: UpdateSupplierStaffDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.suppliersService.updateMyUser(userId, dto, user);

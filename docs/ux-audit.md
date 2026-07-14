@@ -50,7 +50,6 @@ Referencia: dashboard SaaS/B2B de analítica aportado por el usuario. Se adoptan
 | `/supplier/bids/new`              | `CreateBidPage`              | Presentación de oferta           |
 | `/supplier/bids/:id`              | `MyBidDetailPage`            | Detalle de oferta propia         |
 | `/supplier/receipt`               | `SubmissionReceiptPage`      | Comprobante de presentación      |
-| `/supplier/communications`        | `CommunicationsPage`         | Comunicaciones recibidas         |
 
 ### Administración interna
 
@@ -71,8 +70,7 @@ Referencia: dashboard SaaS/B2B de analítica aportado por el usuario. Se adoptan
 | `/internal/bids`               | `BidsInboxPage`              | Bandeja de ofertas               |
 | `/internal/bids/:id`           | `BidDetailInternalPage`      | Detalle de oferta                |
 | `/internal/awards`             | `AwardCancelDesertPage`      | Decisión final                   |
-| `/internal/expediente`         | `ExpedientePage`             | Trazabilidad del expediente      |
-| `/internal/audit`              | `AuditLogsPage`              | Auditoría del sistema            |
+| `/internal/audit`              | `AuditLogsPage`              | Logs y expediente de auditoría   |
 
 ## Componentes compartidos existentes
 

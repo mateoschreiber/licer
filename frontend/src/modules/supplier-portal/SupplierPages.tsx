@@ -79,6 +79,7 @@ interface SupplierStaff extends Record<string, unknown> {
   id: string;
   firstName: string;
   lastName: string;
+  documentId?: string | null;
   phone?: string | null;
   phoneCountry?: string | null;
   title?: string | null;
@@ -222,7 +223,7 @@ export function SupplierRegisterPage() {
         </label>
         <label>
           Tiempo de trabajo con la empresa licitante
-          <input {...register('clientRelationshipDuration')} placeholder="Ej.: 2 anos" />
+          <input {...register('clientRelationshipDuration')} placeholder="Ej.: 2 años" />
         </label>
         <label>
           Usuario
@@ -270,6 +271,7 @@ export function SupplierProfilePage() {
   const staffForm = useForm<{
     firstName: string;
     lastName: string;
+    documentId: string;
     phone: string;
     phoneCountry: string;
     title: string;
@@ -307,6 +309,7 @@ export function SupplierProfilePage() {
     mutationFn: (values: {
       firstName: string;
       lastName: string;
+      documentId: string;
       phone: string;
       phoneCountry: string;
       title: string;
@@ -331,23 +334,31 @@ export function SupplierProfilePage() {
         ? {
             firstName: member.firstName,
             lastName: member.lastName,
+            documentId: member.documentId ?? '',
             phone: member.phone ?? '',
             phoneCountry: member.phoneCountry ?? 'PY',
             title: member.title ?? '',
           }
-        : { firstName: '', lastName: '', phone: '', phoneCountry: 'PY', title: '' },
+        : {
+            firstName: '',
+            lastName: '',
+            documentId: '',
+            phone: '',
+            phoneCountry: 'PY',
+            title: '',
+          },
     );
   };
   return (
     <>
-      <PageHeader title="Mi perfil" description="Datos legales, facturacion y funcionarios." />
+      <PageHeader title="Mi perfil" description="Datos legales, facturación y funcionarios." />
       <div className="tabs">
         <button
           className={'button ghost ' + (tab === 'profile' ? 'active' : '')}
           type="button"
           onClick={() => setTab('profile')}
         >
-          Editar informacion
+          Editar información
         </button>
         <button
           className={'button ghost ' + (tab === 'staff' ? 'active' : '')}
@@ -365,7 +376,7 @@ export function SupplierProfilePage() {
             <div className="section-heading">
               <div>
                 <h2>Datos del proveedor</h2>
-                <p>Informacion legal, facturacion y contacto.</p>
+                <p>Información legal, facturación y contacto.</p>
               </div>
               {!editing && (
                 <button className="button primary" type="button" onClick={() => setEditing(true)}>
@@ -383,15 +394,15 @@ export function SupplierProfilePage() {
                   <input {...form.register('ruc', { required: true })} />
                 </label>
                 <label>
-                  Razon social
+                  Razón social
                   <input {...form.register('legalName', { required: true })} />
                 </label>
                 <label>
-                  Correo facturacion
+                  Correo de facturación
                   <input type="email" {...form.register('billingEmail', { required: true })} />
                 </label>
                 <label>
-                  Direccion facturacion
+                  Dirección de facturación
                   <input {...form.register('billingAddress', { required: true })} />
                 </label>
                 <label>
@@ -413,7 +424,7 @@ export function SupplierProfilePage() {
                   />
                 </label>
                 <label>
-                  Cedula de identidad del representante
+                  Cédula de identidad del representante
                   <input inputMode="numeric" {...form.register('legalRepresentativeDocumentId')} />
                 </label>
                 <label>
@@ -421,7 +432,7 @@ export function SupplierProfilePage() {
                   <input type="email" {...form.register('contactEmail')} />
                 </label>
                 <label>
-                  Telefono
+                  Teléfono
                   <input type="hidden" {...form.register('phone')} />
                   <PhoneInput
                     value={form.watch('phone')}
@@ -437,7 +448,7 @@ export function SupplierProfilePage() {
                   <input {...form.register('clientRelationshipDuration')} />
                 </label>
                 <label className="full">
-                  Direccion
+                  Dirección
                   <input {...form.register('address')} />
                 </label>
                 <div className="form-actions full">
@@ -453,11 +464,11 @@ export function SupplierProfilePage() {
               <dl className="detail-grid">
                 <dt>RUC</dt>
                 <dd>{data.ruc}</dd>
-                <dt>Razon social</dt>
+                <dt>Razón social</dt>
                 <dd>{data.legalName}</dd>
-                <dt>Facturacion</dt>
+                <dt>Facturación</dt>
                 <dd>{data.billingEmail}</dd>
-                <dt>Direccion</dt>
+                <dt>Dirección</dt>
                 <dd>{data.billingAddress}</dd>
                 <dt>Representante</dt>
                 <dd>
@@ -467,11 +478,11 @@ export function SupplierProfilePage() {
                     data.legalRepresentative ||
                     '-'}
                 </dd>
-                <dt>Cedula del representante</dt>
+                <dt>Cédula del representante</dt>
                 <dd>{data.legalRepresentativeDocumentId ?? '-'}</dd>
                 <dt>Contacto</dt>
                 <dd>{data.contactEmail ?? '-'}</dd>
-                <dt>Telefono</dt>
+                <dt>Teléfono</dt>
                 <dd>{data.phone ?? '-'}</dd>
                 <dt>Estado</dt>
                 <dd>
@@ -487,7 +498,7 @@ export function SupplierProfilePage() {
             <div className="section-heading">
               <div>
                 <h2>Funcionarios</h2>
-                <p>Informacion del equipo del proveedor. No tienen acceso al sistema.</p>
+                <p>Información del equipo del proveedor. No tienen acceso al sistema.</p>
               </div>
               <button className="button primary" type="button" onClick={() => startStaff()}>
                 <Plus size={16} /> Agregar
@@ -498,7 +509,12 @@ export function SupplierProfilePage() {
               columns={[
                 { key: 'firstName', header: 'Nombre', render: (row) => String(row.firstName) },
                 { key: 'lastName', header: 'Apellido', render: (row) => String(row.lastName) },
-                { key: 'phone', header: 'Telefono', render: (row) => String(row.phone ?? '-') },
+                {
+                  key: 'documentId',
+                  header: 'Cédula',
+                  render: (row) => String(row.documentId ?? '-'),
+                },
+                { key: 'phone', header: 'Teléfono', render: (row) => String(row.phone ?? '-') },
                 { key: 'title', header: 'Cargo', render: (row) => String(row.title ?? '-') },
                 {
                   key: 'actions',
@@ -547,7 +563,15 @@ export function SupplierProfilePage() {
                 <input {...staffForm.register('lastName', { required: true })} />
               </label>
               <label>
-                Nro. de telefono
+                Número de cédula
+                <input
+                  inputMode="numeric"
+                  autoComplete="off"
+                  {...staffForm.register('documentId', { required: true })}
+                />
+              </label>
+              <label>
+                N.º de teléfono
                 <input type="hidden" {...staffForm.register('phone')} />
                 <PhoneInput
                   value={staffForm.watch('phone')}
@@ -652,7 +676,7 @@ export function SupplierDocumentsPage() {
             </select>
           </label>
           <label>
-            Descripcion breve
+            Descripción breve
             <input
               value={documentDescription}
               onChange={(event) => setDocumentDescription(event.target.value)}
@@ -668,7 +692,7 @@ export function SupplierDocumentsPage() {
                 if (file && file.size > MAX_FILE_SIZE_BYTES) {
                   setSelectedFile(null);
                   setDocumentError(
-                    'El archivo supera el limite maximo de 2 MB. Seleccione otro archivo.',
+                    'El archivo supera el límite máximo de 2 MB. Seleccione otro archivo.',
                   );
                   event.target.value = '';
                   return;
@@ -719,7 +743,7 @@ export function SupplierDocumentsPage() {
               },
               {
                 key: 'description',
-                header: 'Descripcion',
+                header: 'Descripción',
                 render: (row) => String(row.description ?? '-'),
               },
               {
@@ -794,8 +818,8 @@ export function AvailableTendersPage() {
       <DataTable
         rows={data}
         columns={[
-          { key: 'code', header: 'Codigo', render: (row) => displayTenderCode(row.code) },
-          { key: 'title', header: 'Titulo', render: (row) => row.title },
+          { key: 'code', header: 'Código', render: (row) => displayTenderCode(row.code) },
+          { key: 'title', header: 'Título', render: (row) => row.title },
           { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={row.status} /> },
           {
             key: 'deadline',
@@ -832,7 +856,7 @@ export function TenderDetailPage() {
   return (
     <>
       <PageHeader
-        title={data?.title ?? 'Detalle de licitacion'}
+        title={data?.title ?? 'Detalle de licitación'}
         description={data ? displayTenderCode(data.code) : ''}
         actions={
           <div className="row-actions">
@@ -866,13 +890,13 @@ export function TenderDetailPage() {
               <StatusBadge status={data.status} />
             </div>
             <dl className="detail-grid">
-              <dt>Codigo</dt>
+              <dt>Código</dt>
               <dd>{displayTenderCode(data.code)}</dd>
               <dt>Sucursal</dt>
               <dd>{data.branch?.name ?? '-'}</dd>
-              <dt>Categoria</dt>
+              <dt>Categoría</dt>
               <dd>{data.category?.name ?? '-'}</dd>
-              <dt>Area solicitante</dt>
+              <dt>Área solicitante</dt>
               <dd>
                 {data.requestingArea
                   ? (data.requestingArea.code ? data.requestingArea.code + ' - ' : '') +
@@ -881,7 +905,7 @@ export function TenderDetailPage() {
               </dd>
               <dt>Responsable</dt>
               <dd>{data.responsibleEmail ?? '-'}</dd>
-              <dt>Descripcion</dt>
+              <dt>Descripción</dt>
               <dd>{data.description}</dd>
             </dl>
           </section>
@@ -904,10 +928,10 @@ export function TenderDetailPage() {
               <dt>Moneda</dt>
               <dd>{data.currency === 'USD' ? 'USD' : 'Gs.'}</dd>
               <dt>IVA incluido</dt>
-              <dd>{data.vatIncluded ? 'Si' : 'No'}</dd>
+              <dd>{data.vatIncluded ? 'Sí' : 'No'}</dd>
               <dt>Forma de pago</dt>
-              <dd>{data.paymentMethod === 'CREDITO' ? 'Credito' : 'Contado'}</dd>
-              <dt>Condiciones de credito</dt>
+              <dd>{data.paymentMethod === 'CREDITO' ? 'Crédito' : 'Contado'}</dd>
+              <dt>Condiciones de crédito</dt>
               <dd>{data.paymentMethod === 'CREDITO' ? (data.paymentTerms ?? '-') : '-'}</dd>
               <dt>Reemplazo de oferta</dt>
               <dd>{data.allowBidReplacement ? 'Permitido' : 'No permitido'}</dd>
@@ -920,9 +944,9 @@ export function TenderDetailPage() {
                 <table className="detail-items">
                   <thead>
                     <tr>
-                      <th>Descripcion</th>
+                      <th>Descripción</th>
                       <th>Cantidad</th>
-                      <th>Especificaciones tecnicas</th>
+                      <th>Especificaciones técnicas</th>
                       <th>Marca de referencia</th>
                       <th>Equivalente</th>
                       <th>Garantia minima</th>
@@ -936,16 +960,16 @@ export function TenderDetailPage() {
                         <td>{String(item.quantity)}</td>
                         <td>{item.specs ?? '-'}</td>
                         <td>{item.referenceBrandModel ?? '-'}</td>
-                        <td>{item.allowsEquivalent ? 'Si' : 'No'}</td>
+                        <td>{item.allowsEquivalent ? 'Sí' : 'No'}</td>
                         <td>{item.minimumWarranty ?? '-'}</td>
-                        <td>{item.warrantyDocumentRequired ? 'Si' : 'No'}</td>
+                        <td>{item.warrantyDocumentRequired ? 'Sí' : 'No'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p>Sin items registrados.</p>
+              <p>Sin ítems registrados.</p>
             )}
           </section>
           <section className="panel tender-detail">
@@ -1005,8 +1029,8 @@ export function TenderDocumentsPage() {
         rows={data}
         columns={[
           { key: 'type', header: 'Tipo', render: (row) => String(row.type) },
-          { key: 'title', header: 'Titulo', render: (row) => String(row.title) },
-          { key: 'version', header: 'Version', render: (row) => String(row.version) },
+          { key: 'title', header: 'Título', render: (row) => String(row.title) },
+          { key: 'version', header: 'Versión', render: (row) => String(row.version) },
           {
             key: 'download',
             header: '',
@@ -1058,7 +1082,7 @@ export function QuestionsAnswersPage() {
           <TenderSelector
             value={watch('tenderId')}
             onChange={(id) => setValue('tenderId', id, { shouldValidate: true })}
-            label="Licitacion"
+            label="Licitación"
             required
           />
           <label className="full">
@@ -1090,7 +1114,7 @@ export function QuestionsAnswersPage() {
         columns={[
           {
             key: 'tenderId',
-            header: 'Licitacion',
+            header: 'Licitación',
             render: (row) => {
               const tender = row.tender as { code?: string; title?: string } | undefined;
               return tender?.code ? displayTenderCode(tender.code) + ' - ' + tender.title : '-';
@@ -1210,7 +1234,7 @@ export function CreateBidPage() {
 
   const paymentCondition = tender
     ? tender.paymentMethod === 'CREDITO'
-      ? 'Credito - ' + (tender.paymentTerms ?? 'Sin plazo definido')
+      ? 'Crédito - ' + (tender.paymentTerms ?? 'Sin plazo definido')
       : 'Contado'
     : '';
 
@@ -1309,7 +1333,7 @@ export function CreateBidPage() {
       const created = await api.post<BidSummary>('/bids', {
         tenderId: values.tenderId,
         paymentTerms: paymentCondition,
-        deliveryTerms: values.deliveryTerms ? values.deliveryTerms + ' dias' : undefined,
+        deliveryTerms: values.deliveryTerms ? values.deliveryTerms + ' días' : undefined,
         vatIncludedAccepted: true,
         items: bidLines.map((line) => ({
           tenderItemId: line.tenderItemId,
@@ -1334,7 +1358,7 @@ export function CreateBidPage() {
     <>
       <PageHeader
         title="Crear oferta"
-        description="Los items y condiciones se cargan desde la licitacion seleccionada."
+        description="Los ítems y condiciones se cargan desde la licitación seleccionada."
       />
       <section className="panel">
         <form
@@ -1345,7 +1369,7 @@ export function CreateBidPage() {
         >
           <input type="hidden" {...form.register('tenderId', { required: true })} />
           <label>
-            Licitacion
+            Licitación
             <input
               value={tender ? displayTenderCode(tender.code) + ' - ' + tender.title : 'Cargando...'}
               readOnly
@@ -1357,7 +1381,7 @@ export function CreateBidPage() {
             <input value={paymentCondition} readOnly aria-readonly="true" />
           </label>
           <label>
-            Plazo de entrega en dias
+            Plazo de entrega en días
             <input
               type="number"
               min="1"
@@ -1404,7 +1428,7 @@ export function CreateBidPage() {
                           {line.pendingApproval ? (
                             <input
                               value={line.description}
-                              placeholder="Descripcion del item adicional"
+                              placeholder="Descripción del ítem adicional"
                               onChange={(event) =>
                                 updateLine(index, 'description', event.target.value)
                               }
@@ -1480,27 +1504,27 @@ export function CreateBidPage() {
             ) : (
               <p className="muted">
                 {selectedTenderId
-                  ? 'Esta licitacion no tiene items disponibles.'
-                  : 'Seleccione una licitacion para cargar sus items.'}
+                  ? 'Esta licitación no tiene ítems disponibles.'
+                  : 'Seleccione una licitación para cargar sus ítems.'}
               </p>
             )}
           </div>
 
           <section className="full offer-notices">
             <div>
-              <p>* Todo item adicional queda pendiente de aprobacion de la empresa solicitante.</p>
+              <p>* Todo ítem adicional queda pendiente de aprobación de la empresa solicitante.</p>
               <button className="button ghost" type="button" onClick={addAdditionalItem}>
-                Agregar item
+                Agregar ítem
               </button>
             </div>
           </section>
 
           <div className="full offer-grand-total">
-            <span>Total de todos los items</span>
+            <span>Total de todos los ítems</span>
             <strong>{formatMoney(grandTotal, bidCurrency)}</strong>
           </div>
           <p className="full offer-required-notice">
-            * Todos los items y precios de la oferta incluyen IVA.
+            * Todos los ítems y precios de la oferta incluyen IVA.
           </p>
           {submitBid.isError && (
             <p className="error-message full">
@@ -1533,8 +1557,8 @@ export function CreateBidPage() {
       </section>
       <ConfirmDialog
         open={confirmOpen}
-        title="Confirmar envio"
-        message="Confirma que los precios incluyen IVA y que los items adicionales, si existen, quedan pendientes de aprobacion."
+        title="Confirmar envío"
+        message="Confirme que los precios incluyen IVA y que los ítems adicionales, si existen, quedan pendientes de aprobación."
         confirmLabel="Enviar oferta"
         onClose={() => setConfirmOpen(false)}
         onConfirm={() => {
@@ -1581,7 +1605,7 @@ export function MyBidDetailPage() {
             <dl className="detail-grid">
               <dt>Comprobante</dt>
               <dd>{data.receiptCode ?? '-'}</dd>
-              <dt>Licitacion</dt>
+              <dt>Licitación</dt>
               <dd>
                 {data.tender
                   ? displayTenderCode(data.tender.code) + ' - ' + data.tender.title
@@ -1625,7 +1649,7 @@ export function MyBidDetailPage() {
                         <td>{formatMoney(item.total, data.currency)}</td>
                         <td>{item.brand || '-'}</td>
                         <td>{item.model || '-'}</td>
-                        <td>{item.pendingApproval ? 'Pendiente' : 'Incluido en licitacion'}</td>
+                        <td>{item.pendingApproval ? 'Pendiente' : 'Incluido en licitación'}</td>
                         <td>{item.notes || '-'}</td>
                       </tr>
                     ))}
@@ -1633,7 +1657,7 @@ export function MyBidDetailPage() {
                 </table>
               </div>
             ) : (
-              <p>Sin items.</p>
+              <p>Sin ítems.</p>
             )}
           </section>
         </>
@@ -1675,30 +1699,6 @@ export function SubmissionReceiptPage() {
           </button>
         </div>
       </section>
-    </>
-  );
-}
-
-export function CommunicationsPage() {
-  const { data = [] } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: () => api.get<Array<Record<string, unknown>>>('/notifications'),
-  });
-  return (
-    <>
-      <PageHeader title="Comunicaciones" />
-      <DataTable
-        rows={data}
-        columns={[
-          { key: 'subject', header: 'Asunto', render: (row) => String(row.subject) },
-          { key: 'status', header: 'Estado', render: (row) => String(row.status) },
-          {
-            key: 'createdAt',
-            header: 'Fecha y hora PY',
-            render: (row) => formatPyDateTime(String(row.createdAt)),
-          },
-        ]}
-      />
     </>
   );
 }

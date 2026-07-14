@@ -46,7 +46,7 @@ export class AuthService {
         ip,
         metadata: { email: dto.email },
       });
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
     const roles = user.roles.map((userRole) => userRole.role.name);
@@ -125,7 +125,7 @@ export class AuthService {
 
   async refresh(refreshToken?: string) {
     if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token required');
+      throw new UnauthorizedException('Se requiere el token de actualización');
     }
 
     const payload = await this.jwtService.verifyAsync<{ sub: string }>(refreshToken, {
@@ -150,7 +150,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('Token de actualización inválido');
     }
 
     const roles = user.roles.map((userRole) => userRole.role.name);

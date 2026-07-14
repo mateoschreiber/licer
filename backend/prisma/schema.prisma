@@ -211,6 +211,7 @@ model SupplierStaff {
   supplierId String   @db.Uuid
   firstName  String
   lastName   String
+  documentId String?
   phone      String?
   phoneCountry String?
   title      String?

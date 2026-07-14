@@ -51,7 +51,7 @@ export class TendersService {
     });
 
     if (!tender) {
-      throw new NotFoundException('Tender not found');
+      throw new NotFoundException('Licitación no encontrada');
     }
 
     return tender;
@@ -82,13 +82,13 @@ export class TendersService {
     const data = this.toTenderData(dto) as Prisma.TenderUncheckedUpdateInput;
     this.assertDateOrder({
       baseDate: dto.publishedAt
-        ? this.parseDate(dto.publishedAt, 'Fecha base invalida')
+        ? this.parseDate(dto.publishedAt, 'Fecha base inválida')
         : (tender.publishedAt ?? tender.createdAt),
       questionDeadline: dto.questionDeadline
-        ? this.parseDate(dto.questionDeadline, 'Limite de consultas invalido')
+        ? this.parseDate(dto.questionDeadline, 'Límite de consultas inválido')
         : tender.questionDeadline,
       bidDeadline: dto.bidDeadline
-        ? this.parseDate(dto.bidDeadline, 'Limite de ofertas invalido')
+        ? this.parseDate(dto.bidDeadline, 'Límite de ofertas inválido')
         : tender.bidDeadline,
     });
     return this.prisma.tender.update({
@@ -159,7 +159,7 @@ export class TendersService {
       select: select ?? ({ id: true } as T),
     });
     if (!tender) {
-      throw new NotFoundException('Tender not found');
+      throw new NotFoundException('Licitación no encontrada');
     }
     return tender as Prisma.TenderGetPayload<{ select: T }>;
   }
@@ -174,44 +174,44 @@ export class TendersService {
       branchId: dto.branchId,
       responsibleEmail: dto.responsibleEmail,
       responseDeadline: dto.responseDeadline
-        ? this.parseDate(dto.responseDeadline, 'Limite de respuestas invalido')
+        ? this.parseDate(dto.responseDeadline, 'Límite de respuestas inválido')
         : undefined,
       vatIncluded: dto.vatIncluded,
       paymentMethod: dto.paymentMethod,
       paymentTerms: dto.paymentTerms,
       offerValidityUntil: dto.offerValidityUntil
-        ? this.parseDate(dto.offerValidityUntil, 'Validez invalida')
+        ? this.parseDate(dto.offerValidityUntil, 'Validez inválida')
         : undefined,
       requesterArea: dto.requesterArea,
       allowBidReplacement: dto.allowBidReplacement,
       buyerId,
       publishedAt: dto.publishedAt
-        ? this.parseDate(dto.publishedAt, 'Fecha base invalida')
+        ? this.parseDate(dto.publishedAt, 'Fecha base inválida')
         : undefined,
       questionDeadline: dto.questionDeadline
-        ? this.parseDate(dto.questionDeadline, 'Limite de consultas invalido')
+        ? this.parseDate(dto.questionDeadline, 'Límite de consultas inválido')
         : undefined,
       bidDeadline: dto.bidDeadline
-        ? this.parseDate(dto.bidDeadline, 'Limite de ofertas invalido')
+        ? this.parseDate(dto.bidDeadline, 'Límite de ofertas inválido')
         : undefined,
       evaluationStart: dto.evaluationStart
-        ? this.parseDate(dto.evaluationStart, 'Fecha de evaluacion invalida')
+        ? this.parseDate(dto.evaluationStart, 'Fecha de evaluación inválida')
         : undefined,
       estimatedAwardAt: dto.estimatedAwardAt
-        ? this.parseDate(dto.estimatedAwardAt, 'Fecha estimada de adjudicacion invalida')
+        ? this.parseDate(dto.estimatedAwardAt, 'Fecha estimada de adjudicación inválida')
         : undefined,
     };
   }
 
   private resolveTenderDates(dto: CreateTenderDto) {
     const baseDate = dto.publishedAt
-      ? this.parseDate(dto.publishedAt, 'Fecha base invalida')
+      ? this.parseDate(dto.publishedAt, 'Fecha base inválida')
       : new Date();
     const questionDeadline = dto.questionDeadline
-      ? this.parseDate(dto.questionDeadline, 'Limite de consultas invalido')
+      ? this.parseDate(dto.questionDeadline, 'Límite de consultas inválido')
       : this.endOfDay(this.addDays(baseDate, 15));
     const bidDeadline = dto.bidDeadline
-      ? this.parseDate(dto.bidDeadline, 'Limite de ofertas invalido')
+      ? this.parseDate(dto.bidDeadline, 'Límite de ofertas inválido')
       : this.endOfDay(this.addDays(baseDate, 30));
 
     this.assertDateOrder({ baseDate, questionDeadline, bidDeadline });
@@ -237,15 +237,15 @@ export class TendersService {
     bidDeadline: Date;
   }) {
     if (dates.questionDeadline && dates.questionDeadline < dates.baseDate) {
-      throw new BadRequestException('El limite de consultas no puede ser anterior a la fecha base');
+      throw new BadRequestException('El límite de consultas no puede ser anterior a la fecha base');
     }
     if (dates.questionDeadline && dates.bidDeadline < dates.questionDeadline) {
       throw new BadRequestException(
-        'El limite de ofertas no puede ser anterior al limite de consultas',
+        'El límite de ofertas no puede ser anterior al límite de consultas',
       );
     }
     if (!dates.questionDeadline && dates.bidDeadline < dates.baseDate) {
-      throw new BadRequestException('El limite de ofertas no puede ser anterior a la fecha base');
+      throw new BadRequestException('El límite de ofertas no puede ser anterior a la fecha base');
     }
   }
 

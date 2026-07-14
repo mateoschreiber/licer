@@ -1,5 +1,4 @@
 import {
-  Archive,
   Building2,
   ClipboardCheck,
   FileText,
@@ -21,7 +20,6 @@ const items: ShellNavItem[] = [
   { label: 'Consultas', to: '/internal/questions', icon: HelpCircle },
   { label: 'Ofertas', to: '/internal/bids', icon: ClipboardCheck },
   { label: 'Decisión', to: '/internal/awards', icon: Gavel },
-  { label: 'Expediente', to: '/internal/expediente', icon: Archive },
   { label: 'Auditoría', to: '/internal/audit', icon: ShieldCheck },
 ];
 

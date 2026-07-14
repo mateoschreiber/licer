@@ -32,7 +32,7 @@ export class RolesService {
   async update(id: string, dto: UpdateRoleDto) {
     const existing = await this.prisma.role.findUnique({ where: { id } });
     if (!existing) {
-      throw new NotFoundException('Role not found');
+      throw new NotFoundException('Rol no encontrado');
     }
 
     return this.prisma.$transaction(async (tx) => {

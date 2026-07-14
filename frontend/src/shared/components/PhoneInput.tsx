@@ -47,7 +47,7 @@ export function PhoneInput({ value, country, onChange, onCountryChange, id }: Ph
   return (
     <div className="phone-input">
       <select
-        aria-label="Pais y prefijo"
+        aria-label="País y prefijo"
         value={selectedCountry}
         onChange={(event) => changeCountry(event.target.value as CountryCode)}
       >
@@ -68,7 +68,7 @@ export function PhoneInput({ value, country, onChange, onCountryChange, id }: Ph
         value={number}
         maxLength={maxLength}
         onChange={(event) => changeNumber(event.target.value)}
-        placeholder="Numero"
+        placeholder="Número"
       />
     </div>
   );

@@ -59,7 +59,7 @@ export class TenderDocumentsService {
       where: { id, voidedAt: null },
     });
     if (!existing) {
-      throw new NotFoundException('Tender document not found');
+      throw new NotFoundException('Documento de licitación no encontrado');
     }
 
     return this.prisma.tenderDocument.update({

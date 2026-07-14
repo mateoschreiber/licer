@@ -1,4 +1,4 @@
-import { FileText, HelpCircle, Mail, UserRound } from 'lucide-react';
+import { FileText, HelpCircle, UserRound } from 'lucide-react';
 import { ApplicationShell, ShellNavItem } from '../../shared/components/ApplicationShell';
 import { useAuth } from '../../shared/auth/AuthProvider';
 
@@ -7,7 +7,6 @@ const items: ShellNavItem[] = [
   { label: 'Mis documentos', to: '/supplier/documents', icon: FileText },
   { label: 'Licitaciones disponibles', to: '/supplier/tenders', icon: FileText },
   { label: 'Mis consultas', to: '/supplier/questions', icon: HelpCircle },
-  { label: 'Comunicaciones', to: '/supplier/communications', icon: Mail },
 ];
 
 export function SupplierLayout() {

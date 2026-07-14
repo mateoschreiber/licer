@@ -52,7 +52,7 @@ export class UsersService {
   async update(id: string, dto: UpdateUserDto) {
     const existing = await this.prisma.user.findUnique({ where: { id } });
     if (!existing || existing.deletedAt) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Usuario no encontrado');
     }
 
     const passwordHash = dto.password ? await bcrypt.hash(dto.password, 12) : undefined;

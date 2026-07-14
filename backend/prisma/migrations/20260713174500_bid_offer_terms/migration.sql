@@ -1,0 +1,8 @@
+ALTER TABLE "Bid"
+ADD COLUMN "vatIncludedAccepted" BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE "BidItem"
+ADD COLUMN "description" TEXT,
+ADD COLUMN "brand" TEXT,
+ADD COLUMN "model" TEXT,
+ADD COLUMN "pendingApproval" BOOLEAN NOT NULL DEFAULT false;

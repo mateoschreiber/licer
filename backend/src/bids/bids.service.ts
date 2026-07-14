@@ -53,11 +53,11 @@ export class BidsService {
 
     this.assertSupplierCanBid(supplier);
     if (!tender) {
-      throw new NotFoundException('Tender not found');
+      throw new NotFoundException('Licitación no encontrada');
     }
     this.assertBidWindowOpen(tender);
     if (existingBid) {
-      throw new BadRequestException('Ya presento una oferta para esta licitacion');
+      throw new BadRequestException('Ya presentó una oferta para esta licitación');
     }
     await this.validateBidItems(dto, tender.id);
 
@@ -128,20 +128,20 @@ export class BidsService {
     });
 
     if (!bid) {
-      throw new NotFoundException('Bid not found');
+      throw new NotFoundException('Oferta no encontrada');
     }
 
     if (user.roles.includes(ROLES.PROVEEDOR)) {
       if (bid.supplierId !== user.supplierId) {
         await this.auditDeniedBidAccess(id, user, ip);
-        throw new ForbiddenException('Supplier cannot access another supplier bid');
+        throw new ForbiddenException('No puede acceder a la oferta de otro proveedor');
       }
       return bid;
     }
 
     if (!user.permissions.includes('bids:read:internal')) {
       await this.auditDeniedBidAccess(id, user, ip);
-      throw new ForbiddenException('Internal permission required');
+      throw new ForbiddenException('Se requiere permiso interno');
     }
 
     await this.auditService.log({
@@ -166,13 +166,13 @@ export class BidsService {
     });
 
     if (!bid) {
-      throw new NotFoundException('Bid not found');
+      throw new NotFoundException('Oferta no encontrada');
     }
     this.assertOwnBid(bid, supplierId);
     this.assertSupplierCanBid(bid.supplier);
     this.assertBidWindowOpen(bid.tender);
     if (bid.status !== 'BORRADOR') {
-      throw new ForbiddenException('Only draft bids can be submitted');
+      throw new ForbiddenException('Solo se pueden enviar ofertas en borrador');
     }
     const existingBid = await this.prisma.bid.findFirst({
       where: {
@@ -185,7 +185,7 @@ export class BidsService {
       select: { id: true },
     });
     if (existingBid) {
-      throw new BadRequestException('Ya presento una oferta para esta licitacion');
+      throw new BadRequestException('Ya presentó una oferta para esta licitación');
     }
 
     return this.prisma.bid.update({
@@ -205,7 +205,7 @@ export class BidsService {
       select: { id: true },
     });
     if (!bid) {
-      throw new NotFoundException('Bid not found');
+      throw new NotFoundException('Oferta no encontrada');
     }
 
     const now = new Date();
@@ -223,7 +223,7 @@ export class BidsService {
 
   private async validateBidItems(dto: CreateBidDto, tenderId: string) {
     if (dto.items.length === 0) {
-      throw new BadRequestException('La oferta debe incluir al menos un item');
+      throw new BadRequestException('La oferta debe incluir al menos un ítem');
     }
     const linkedIds = [
       ...new Set(dto.items.flatMap((item) => (item.tenderItemId ? [item.tenderItemId] : []))),
@@ -233,7 +233,7 @@ export class BidsService {
         where: { id: { in: linkedIds }, tenderId, deletedAt: null },
       });
       if (validCount !== linkedIds.length) {
-        throw new BadRequestException('Uno o mas items no pertenecen a la licitacion seleccionada');
+        throw new BadRequestException('Uno o más ítems no pertenecen a la licitación seleccionada');
       }
     }
     const invalidAdditional = dto.items.some(
@@ -241,33 +241,33 @@ export class BidsService {
     );
     if (invalidAdditional) {
       throw new BadRequestException(
-        'Los items adicionales requieren descripcion y aceptacion de aprobacion pendiente',
+        'Los ítems adicionales requieren descripción y aceptación de aprobación pendiente',
       );
     }
   }
 
   private requireSupplier(user: AuthenticatedUser) {
     if (!user.supplierId) {
-      throw new ForbiddenException('Supplier user required');
+      throw new ForbiddenException('Se requiere un usuario proveedor');
     }
     return user.supplierId;
   }
 
   private assertOwnBid(bid: Bid, supplierId: string) {
     if (bid.supplierId !== supplierId) {
-      throw new ForbiddenException('Supplier cannot access another supplier bid');
+      throw new ForbiddenException('No puede acceder a la oferta de otro proveedor');
     }
   }
 
   private assertSupplierCanBid(supplier: Supplier | null) {
     if (!supplier || supplier.status !== 'ACTIVO') {
-      throw new ForbiddenException('Supplier must be ACTIVO to bid');
+      throw new ForbiddenException('El proveedor debe estar ACTIVO para ofertar');
     }
   }
 
   private assertBidWindowOpen(tender: Pick<Tender, 'bidDeadline'>) {
     if (tender.bidDeadline.getTime() <= Date.now()) {
-      throw new ForbiddenException('Bid deadline is closed');
+      throw new ForbiddenException('El plazo de ofertas está cerrado');
     }
   }
 

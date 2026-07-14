@@ -15,9 +15,9 @@ interface TenderSelectorProps {
 export function TenderSelector({
   value,
   onChange,
-  label = 'Licitacion',
+  label = 'Licitación',
   required = false,
-  placeholder = 'Buscar por codigo o titulo',
+  placeholder = 'Buscar por código o título',
 }: TenderSelectorProps) {
   const [text, setText] = useState('');
   const [open, setOpen] = useState(false);

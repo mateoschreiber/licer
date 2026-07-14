@@ -306,7 +306,7 @@ export class AwardsService {
       })),
       warnings:
         eligibleBids.length === 0
-          ? ['No se encontraron ofertas elegibles para esta licitacion']
+          ? ['No se encontraron ofertas elegibles para esta licitación']
           : [],
     };
   }
@@ -352,7 +352,7 @@ export class AwardsService {
       select: { id: true },
     });
     if (!tender) {
-      throw new NotFoundException('Tender not found');
+      throw new NotFoundException('Licitación no encontrada');
     }
 
     const supplier = await this.prisma.supplier.findFirst({
@@ -360,7 +360,7 @@ export class AwardsService {
       select: { id: true },
     });
     if (!supplier) {
-      throw new NotFoundException('Supplier not found');
+      throw new NotFoundException('Proveedor no encontrado');
     }
 
     if (!dto.bidId) {
@@ -386,10 +386,12 @@ export class AwardsService {
       },
     });
     if (!bid) {
-      throw new NotFoundException('Bid not found');
+      throw new NotFoundException('Oferta no encontrada');
     }
     if (bid.tenderId !== dto.tenderId || bid.supplierId !== dto.supplierId) {
-      throw new BadRequestException('La oferta no pertenece a la licitacion y proveedor indicados');
+      throw new BadRequestException(
+        'La oferta no pertenece a la licitación y al proveedor indicados',
+      );
     }
 
     return {

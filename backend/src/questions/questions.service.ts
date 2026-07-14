@@ -12,7 +12,7 @@ export class QuestionsService {
 
   async create(dto: CreateQuestionDto, user: AuthenticatedUser) {
     if (!user.supplierId) {
-      throw new ForbiddenException('Supplier user required');
+      throw new ForbiddenException('Se requiere un usuario proveedor');
     }
 
     const [supplier, tender] = await Promise.all([
@@ -21,13 +21,13 @@ export class QuestionsService {
     ]);
 
     if (!supplier || supplier.status !== 'ACTIVO') {
-      throw new ForbiddenException('Supplier must be ACTIVO to ask questions');
+      throw new ForbiddenException('El proveedor debe estar ACTIVO para realizar consultas');
     }
     if (!tender || tender.deletedAt || tender.status === 'BORRADOR') {
-      throw new NotFoundException('Tender not found');
+      throw new NotFoundException('Licitación no encontrada');
     }
     if (tender.questionDeadline && tender.questionDeadline.getTime() < Date.now()) {
-      throw new ForbiddenException('Question deadline is closed');
+      throw new ForbiddenException('El plazo de consultas está cerrado');
     }
 
     return this.prisma.question.create({
@@ -75,7 +75,7 @@ export class QuestionsService {
         user: { select: { name: true } },
       },
     });
-    if (!question) throw new NotFoundException('Question not found');
+    if (!question) throw new NotFoundException('Consulta no encontrada');
     return question;
   }
 
@@ -84,7 +84,7 @@ export class QuestionsService {
       where: { id, deletedAt: null },
     });
     if (!question) {
-      throw new NotFoundException('Question not found');
+      throw new NotFoundException('Consulta no encontrada');
     }
 
     return this.prisma.$transaction(async (tx) => {

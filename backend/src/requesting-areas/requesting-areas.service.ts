@@ -19,7 +19,7 @@ export class RequestingAreasService {
       where: { id, deletedAt: null },
     });
     if (!area) {
-      throw new NotFoundException('Requesting area not found');
+      throw new NotFoundException('Área solicitante no encontrada');
     }
     return area;
   }
@@ -32,7 +32,7 @@ export class RequestingAreasService {
       },
     });
     if (existing) {
-      throw new ConflictException('Requesting area name already exists');
+      throw new ConflictException('Ya existe un área solicitante con ese nombre');
     }
     const code = await this.generateCode(dto.name);
     return this.prisma.requestingArea.create({
@@ -50,7 +50,7 @@ export class RequestingAreasService {
       where: { id, deletedAt: null },
     });
     if (!area) {
-      throw new NotFoundException('Requesting area not found');
+      throw new NotFoundException('Área solicitante no encontrada');
     }
 
     if (dto.name && dto.name !== area.name) {
@@ -58,7 +58,7 @@ export class RequestingAreasService {
         where: { name: dto.name, deletedAt: null, id: { not: id } },
       });
       if (duplicate) {
-        throw new ConflictException('Requesting area name already exists');
+        throw new ConflictException('Ya existe un área solicitante con ese nombre');
       }
     }
     if (dto.code && dto.code !== area.code) {
@@ -66,7 +66,7 @@ export class RequestingAreasService {
         where: { code: dto.code, deletedAt: null, id: { not: id } },
       });
       if (duplicateCode) {
-        throw new ConflictException('Requesting area code already exists');
+        throw new ConflictException('Ya existe un área solicitante con ese código');
       }
     }
 
@@ -86,7 +86,7 @@ export class RequestingAreasService {
       where: { id, deletedAt: null },
     });
     if (!area) {
-      throw new NotFoundException('Requesting area not found');
+      throw new NotFoundException('Área solicitante no encontrada');
     }
     return this.prisma.requestingArea.update({
       where: { id },

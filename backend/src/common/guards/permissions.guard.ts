@@ -23,7 +23,7 @@ export class PermissionsGuard implements CanActivate {
     ]);
 
     if (!requiredPermissions?.length) {
-      throw new ForbiddenException('Permission metadata required');
+      throw new ForbiddenException('Falta la configuración de permisos');
     }
 
     const request = context.switchToHttp().getRequest<RequestWithUser>();
@@ -37,7 +37,7 @@ export class PermissionsGuard implements CanActivate {
     const allowed = requiredPermissions.some((permission) => userPermissions.includes(permission));
 
     if (!allowed) {
-      throw new ForbiddenException('Permission denied');
+      throw new ForbiddenException('Permiso denegado');
     }
 
     return true;

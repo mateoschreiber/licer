@@ -30,7 +30,7 @@ export class FilesController {
   async upload(@UploadedFile() file: any, @CurrentUser() user: AuthenticatedUser) {
     if (!file) throw new BadRequestException('Archivo requerido o superior a 2 MB');
     if (file.size > 2 * 1024 * 1024) {
-      throw new BadRequestException('El archivo supera el limite maximo de 2 MB');
+      throw new BadRequestException('El archivo supera el límite máximo de 2 MB');
     }
     return this.filesService.storeUpload(file, user.id);
   }
@@ -46,7 +46,7 @@ export class FilesController {
     const descriptor = await this.filesService.prepareDownload(id, user, request.ip);
 
     if (!existsSync(descriptor.storagePath)) {
-      throw new NotFoundException('Stored file is not available');
+      throw new NotFoundException('El archivo almacenado no está disponible');
     }
 
     response.setHeader('Content-Type', descriptor.mime);

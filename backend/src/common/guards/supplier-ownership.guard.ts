@@ -16,7 +16,7 @@ export class SupplierOwnershipGuard implements CanActivate {
       request.params.supplierId ?? request.params.id ?? request.body?.supplierId;
 
     if (!requestedSupplierId || requestedSupplierId !== user.supplierId) {
-      throw new ForbiddenException('Supplier ownership mismatch');
+      throw new ForbiddenException('El recurso no pertenece al proveedor');
     }
 
     return true;
