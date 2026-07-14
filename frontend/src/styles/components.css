@@ -185,6 +185,18 @@
   display: none;
 }
 
+.sidebar-collapsed .sidebar-top {
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 5.25rem;
+  margin-bottom: var(--space-2);
+}
+
+.sidebar-collapsed .sidebar-brand {
+  justify-content: center;
+  padding-inline: 0;
+}
+
 .sidebar-collapsed .sidebar-nav a,
 .sidebar-collapsed .nav-button,
 .sidebar-collapsed .sidebar-user {
@@ -193,8 +205,10 @@
 }
 
 .sidebar-collapsed .sidebar-collapse {
-  right: -0.15rem;
-  bottom: -0.55rem;
+  right: auto;
+  bottom: 0;
+  left: 50%;
+  margin-left: -0.925rem;
 }
 
 .content {

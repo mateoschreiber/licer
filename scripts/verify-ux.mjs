@@ -43,6 +43,15 @@ for (const layer of ['./styles/tokens.css', './styles/base.css', './styles/compo
   if (!stylesEntry.includes(layer)) errors.push(`styles.css no carga ${layer}`);
 }
 
+const componentStyles = readFileSync(join(frontend, 'styles', 'components.css'), 'utf8');
+for (const rule of [
+  '.sidebar-collapsed .sidebar-top',
+  '.sidebar-collapsed .sidebar-brand',
+  '.sidebar-collapsed .sidebar-collapse',
+]) {
+  if (!componentStyles.includes(rule)) errors.push(`Falta la regla responsive ${rule}`);
+}
+
 const app = readFileSync(join(frontend, 'App.tsx'), 'utf8');
 const routeCount = (app.match(/<Route(?:\s|>)/g) ?? []).length;
 const requiredRoutes = [
