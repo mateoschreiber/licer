@@ -30,7 +30,7 @@ export function LoginPage() {
     <main className="auth-screen">
       <section className="auth-panel">
         <div className="brand-block">
-          <span className="brand-mark">PL</span>
+          <span className="brand-mark">LI</span>
           <div>
             <h1>Portal de Licitaciones</h1>
             <p>Acceso seguro para empresa y proveedores.</p>

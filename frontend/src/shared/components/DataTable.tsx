@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { EmptyState } from './UiPrimitives';
 
 export interface DataTableColumn<T> {
   key: string;
@@ -10,12 +11,29 @@ interface DataTableProps<T> {
   columns: DataTableColumn<T>[];
   rows: T[];
   emptyText?: string;
+  label?: string;
 }
 
-export function DataTable<T>({ columns, rows, emptyText = 'Sin datos' }: DataTableProps<T>) {
+export function DataTable<T>({
+  columns,
+  rows,
+  emptyText = 'Sin datos',
+  label = 'Listado de resultados',
+}: DataTableProps<T>) {
+  if (rows.length === 0) {
+    return (
+      <div className="table-shell">
+        <EmptyState
+          title={emptyText}
+          description="No hay registros para mostrar con los criterios actuales."
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="table-shell">
-      <table>
+      <table aria-label={label}>
         <thead>
           <tr>
             {columns.map((column) => (
@@ -24,24 +42,18 @@ export function DataTable<T>({ columns, rows, emptyText = 'Sin datos' }: DataTab
           </tr>
         </thead>
         <tbody>
-          {rows.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="empty-cell">
-                {emptyText}
-              </td>
-            </tr>
-          ) : (
-            rows.map((row, index) => {
-              const id = (row as { id?: unknown }).id;
-              return (
-                <tr key={typeof id === 'string' ? id : index}>
-                  {columns.map((column) => (
-                    <td key={column.key}>{column.render(row)}</td>
-                  ))}
-                </tr>
-              );
-            })
-          )}
+          {rows.map((row, index) => {
+            const id = (row as { id?: unknown }).id;
+            return (
+              <tr key={typeof id === 'string' ? id : index}>
+                {columns.map((column) => (
+                  <td key={column.key} data-label={column.header}>
+                    {column.render(row)}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

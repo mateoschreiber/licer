@@ -1,0 +1,105 @@
+:root {
+  color-scheme: light;
+
+  --font-sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+
+  --color-canvas: #f5f4f1;
+  --color-canvas-strong: #efeeea;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #faf9f7;
+  --color-surface-raised: #ffffff;
+  --color-text: #202521;
+  --color-text-soft: #4f5852;
+  --color-text-muted: #737b75;
+  --color-border: #dfdfda;
+  --color-border-strong: #c8cbc5;
+
+  --color-primary-50: #edf7f4;
+  --color-primary-100: #d5eee7;
+  --color-primary-200: #adddce;
+  --color-primary-500: #17806d;
+  --color-primary-600: #0e6d5c;
+  --color-primary-700: #0c594d;
+  --color-primary-800: #10483f;
+  --color-primary-contrast: #ffffff;
+
+  --color-blue-50: #eef5ff;
+  --color-blue-500: #3b75bd;
+  --color-violet-50: #f4f0ff;
+  --color-violet-500: #7357b5;
+  --color-amber-50: #fff7e5;
+  --color-amber-500: #a96d14;
+
+  --color-success-bg: #e8f6ee;
+  --color-success: #21734a;
+  --color-warning-bg: #fff3d6;
+  --color-warning: #805900;
+  --color-danger-bg: #fceced;
+  --color-danger: #a43c45;
+  --color-info-bg: #eaf2fb;
+  --color-info: #356899;
+  --color-neutral-bg: #eff1ee;
+  --color-neutral: #59615b;
+
+  --chart-1: #2f78b7;
+  --chart-2: #428c87;
+  --chart-3: #a28a51;
+  --chart-4: #7864b5;
+  --chart-5: #c06861;
+
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.4rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-pill: 999px;
+
+  --shadow-xs: 0 1px 2px rgb(28 34 30 / 4%);
+  --shadow-sm: 0 8px 24px rgb(28 34 30 / 7%);
+  --shadow-md: 0 18px 50px rgb(28 34 30 / 14%);
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.15rem;
+
+  --control-sm: 2rem;
+  --control-md: 2.5rem;
+  --control-lg: 2.875rem;
+  --sidebar-width: 16.5rem;
+  --sidebar-collapsed-width: 4.5rem;
+  --content-max: 100rem;
+
+  --z-base: 1;
+  --z-sticky: 20;
+  --z-dropdown: 40;
+  --z-drawer: 60;
+  --z-modal: 80;
+  --z-toast: 100;
+
+  --transition-fast: 140ms ease;
+  --transition-base: 220ms ease;
+
+  --breakpoint-mobile: 48rem;
+  --breakpoint-tablet: 72rem;
+
+  --primary: var(--color-primary-600);
+  --border: var(--color-border);
+  --muted: var(--color-text-muted);
+}

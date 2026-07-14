@@ -1,4 +1,5 @@
 import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -21,16 +22,32 @@ export function ConfirmDialog({
   variant = 'danger',
   hideCancel = false,
 }: ConfirmDialogProps) {
+  const confirmRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (open) confirmRef.current?.focus();
+  }, [open]);
+
   if (!open) {
     return null;
   }
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true">
+    <div
+      className="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') onClose();
+      }}
+    >
       <div className="modal">
         <div className="modal-title">
-          {variant === 'success' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
-          <h2>{title}</h2>
+          <span className={`modal-icon modal-icon-${variant === 'success' ? 'primary' : 'danger'}`}>
+            {variant === 'success' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
+          </span>
+          <h2 id="confirm-dialog-title">{title}</h2>
         </div>
         <p>{message}</p>
         <div className="modal-actions">
@@ -40,6 +57,7 @@ export function ConfirmDialog({
             </button>
           )}
           <button
+            ref={confirmRef}
             type="button"
             className={variant === 'success' ? 'button primary' : 'button danger'}
             onClick={onConfirm}

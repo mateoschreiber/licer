@@ -16,6 +16,8 @@ import { Timeline } from '../../shared/components/Timeline';
 import { TenderSelector } from '../../shared/components/TenderSelector';
 import { SupplierSelector } from '../../shared/components/SupplierSelector';
 import { PhoneInput } from '../../shared/components/PhoneInput';
+import { confirmAction, notify } from '../../shared/components/FeedbackHost';
+import { LoadingState, MetricCard, MiniBarChart } from '../../shared/components/UiPrimitives';
 import {
   displayTenderCode,
   formatMoney,
@@ -74,32 +76,74 @@ interface RoleFormValues {
 }
 
 export function DashboardPage() {
-  const { data: tenders = [] } = useQuery({
+  const { data: tenders = [], isLoading: tendersLoading } = useQuery({
     queryKey: ['internal-tenders'],
     queryFn: () => api.get<TenderSummary[]>('/tenders'),
   });
-  const { data: bids = [] } = useQuery({
+  const { data: bids = [], isLoading: bidsLoading } = useQuery({
     queryKey: ['internal-bids'],
     queryFn: () => api.get<BidSummary[]>('/bids'),
   });
 
   return (
     <>
-      <PageHeader title="Dashboard" description="Vista operativa de procesos activos." />
+      <PageHeader
+        title="Resumen operativo"
+        description="Estado general de licitaciones y ofertas."
+      />
+      {tendersLoading || bidsLoading ? (
+        <LoadingState label="Cargando resumen operativo" rows={3} />
+      ) : null}
       <section className="metric-grid">
-        <div className="metric">
-          <span>Licitaciones</span>
-          <strong>{tenders.length}</strong>
-        </div>
-        <div className="metric">
-          <span>Ofertas internas</span>
-          <strong>{bids.length}</strong>
-        </div>
-        <div className="metric">
-          <span>Regla critica</span>
-          <strong>Auditada</strong>
-        </div>
+        <MetricCard
+          label="Licitaciones"
+          value={tenders.length}
+          detail="Total visible actualmente"
+          trend="En tiempo real"
+        />
+        <MetricCard
+          label="Ofertas recibidas"
+          value={bids.length}
+          detail="Total registrado"
+          trend="En tiempo real"
+          tone="blue"
+        />
+        <MetricCard
+          label="Procesos publicados"
+          value={tenders.filter((tender) => tender.status === 'PUBLICADA').length}
+          detail="Licitaciones abiertas a proveedores"
+          tone="amber"
+        />
       </section>
+      <MiniBarChart
+        title="Distribución de procesos"
+        description="Cantidad actual agrupada por estado. Fuente: módulo de licitaciones."
+        values={[
+          {
+            label: 'Borrador',
+            value: tenders.filter((item) => item.status === 'BORRADOR').length,
+            tone: 'amber',
+          },
+          {
+            label: 'Publicadas',
+            value: tenders.filter((item) => item.status === 'PUBLICADA').length,
+          },
+          {
+            label: 'Cerradas',
+            value: tenders.filter((item) => item.status === 'CERRADA').length,
+            tone: 'blue',
+          },
+          {
+            label: 'Adjudicadas',
+            value: tenders.filter((item) => item.status === 'ADJUDICADA').length,
+          },
+          {
+            label: 'Canceladas',
+            value: tenders.filter((item) => item.status === 'CANCELADA').length,
+            tone: 'amber',
+          },
+        ]}
+      />
     </>
   );
 }
@@ -636,7 +680,7 @@ export function SupplierDetailPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['supplier-detail', id] });
       await queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      window.alert('Cambios guardados correctamente.');
+      notify('Los datos del proveedor se actualizaron.', { title: 'Cambios guardados' });
     },
   });
   const addDocument = useMutation({
@@ -690,7 +734,12 @@ export function SupplierDetailPage() {
               className="button danger"
               type="button"
               onClick={() => {
-                if (confirm('Eliminar proveedor y bloquear sus usuarios?')) deleteSupplier.mutate();
+                void confirmAction({
+                  title: 'Eliminar proveedor',
+                  message: 'Se eliminará el proveedor y se bloquearán sus usuarios asociados.',
+                  confirmLabel: 'Eliminar',
+                  tone: 'danger',
+                }).then((confirmed) => confirmed && deleteSupplier.mutate());
               }}
             >
               <Trash2 size={16} /> Eliminar
@@ -699,7 +748,7 @@ export function SupplierDetailPage() {
         }
       />
       {!data ? (
-        <section className="panel">Cargando proveedor...</section>
+        <LoadingState label="Cargando proveedor" />
       ) : (
         <>
           {!isAdmin ? (
@@ -718,7 +767,11 @@ export function SupplierDetailPage() {
                 <form
                   className="grid-form"
                   onSubmit={form.handleSubmit((values) => {
-                    if (window.confirm('Guardar los cambios del proveedor?')) save.mutate(values);
+                    void confirmAction({
+                      title: 'Guardar cambios',
+                      message: 'Se actualizarán los datos registrados del proveedor.',
+                      confirmLabel: 'Guardar',
+                    }).then((confirmed) => confirmed && save.mutate(values));
                   })}
                 >
                   <label>
@@ -927,8 +980,15 @@ export function SupplierDetailPage() {
                           className="button danger"
                           type="button"
                           onClick={() => {
-                            if (confirm('Eliminar documento?'))
-                              deleteDocument.mutate(String(row.id));
+                            void confirmAction({
+                              title: 'Eliminar documento',
+                              message:
+                                'El documento dejará de estar disponible para este proveedor.',
+                              confirmLabel: 'Eliminar',
+                              tone: 'danger',
+                            }).then(
+                              (confirmed) => confirmed && deleteDocument.mutate(String(row.id)),
+                            );
                           }}
                         >
                           <Trash2 size={16} /> Eliminar
@@ -1569,9 +1629,10 @@ function escapePrintHtml(value: unknown) {
 function previewTenderA4(data: TenderDetailData) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
-    window.alert(
-      'El navegador bloqueo la ventana de previsualizacion. Habilite las ventanas emergentes e intente nuevamente.',
-    );
+    notify('Habilite las ventanas emergentes e intente nuevamente.', {
+      title: 'No se pudo abrir la previsualización',
+      tone: 'error',
+    });
     return;
   }
   const detail = (label: string, value: unknown) =>
@@ -1645,12 +1706,11 @@ export function TenderDetailInternalPage() {
                 className="button primary"
                 type="button"
                 onClick={() => {
-                  if (
-                    confirm(
-                      'Confirma publicar esta licitacion? Esta accion la hara visible para proveedores autorizados.',
-                    )
-                  )
-                    publish.mutate();
+                  void confirmAction({
+                    title: 'Publicar licitación',
+                    message: 'La licitación quedará visible para los proveedores autorizados.',
+                    confirmLabel: 'Publicar',
+                  }).then((confirmed) => confirmed && publish.mutate());
                 }}
               >
                 Publicar
@@ -1664,12 +1724,12 @@ export function TenderDetailInternalPage() {
                 className="button danger"
                 type="button"
                 onClick={() => {
-                  if (
-                    confirm(
-                      'Confirma eliminar esta licitacion? Se ocultara del portal y se conservara su trazabilidad.',
-                    )
-                  )
-                    removeTender.mutate();
+                  void confirmAction({
+                    title: 'Eliminar licitación',
+                    message: 'Se ocultará del portal y se conservará su trazabilidad.',
+                    confirmLabel: 'Eliminar',
+                    tone: 'danger',
+                  }).then((confirmed) => confirmed && removeTender.mutate());
                 }}
                 disabled={removeTender.isPending}
               >
@@ -1680,7 +1740,7 @@ export function TenderDetailInternalPage() {
         }
       />
       {!data ? (
-        <section className="panel">Cargando licitacion...</section>
+        <LoadingState label="Cargando licitación" />
       ) : (
         <>
           <section className="panel tender-detail">
@@ -1967,7 +2027,7 @@ export function QuestionDetailInternalPage() {
         }
       />
       {!data ? (
-        <section className="panel">Cargando consulta...</section>
+        <LoadingState label="Cargando consulta" />
       ) : (
         <section className="panel ticket">
           <div className="ticket-head">
@@ -2129,7 +2189,10 @@ interface InternalBidDetail extends BidSummary {
 function previewBidA4(data: InternalBidDetail) {
   const win = window.open('', '_blank');
   if (!win) {
-    window.alert('Habilite las ventanas emergentes para previsualizar la oferta.');
+    notify('Habilite las ventanas emergentes e intente nuevamente.', {
+      title: 'No se pudo abrir la oferta',
+      tone: 'error',
+    });
     return;
   }
   const esc = (value: unknown) =>
@@ -2187,7 +2250,7 @@ export function BidDetailInternalPage() {
         }
       />
       {!data ? (
-        <section className="panel">Cargando oferta...</section>
+        <LoadingState label="Cargando oferta" />
       ) : (
         <>
           <section className="panel tender-detail">
@@ -2576,7 +2639,7 @@ export function AwardCancelDesertPage() {
       <section className="panel">
         <div className="search-field">
           <label>Buscar por ID/Codigo/RUC/Nombre</label>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="search-row">
             <div className="autocomplete-field">
               <input
                 value={identifier}
@@ -2630,14 +2693,17 @@ export function AwardCancelDesertPage() {
                 <strong>Ofertas elegibles:</strong>
                 <ul className="bid-list">
                   {resolveResult.eligibleBids.map((b) => (
-                    <li
-                      key={b.id}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => selectEligibleBid(b)}
-                    >
-                      {b.tender && `${displayTenderCode(b.tender.code)} | `}
-                      {b.supplier && `${b.supplier.legalName} | `}
-                      {b.id.slice(0, 8)}... | {b.status} | {formatMoney(b.totalAmount, b.currency)}
+                    <li key={b.id}>
+                      <button
+                        className="bid-option"
+                        type="button"
+                        onClick={() => selectEligibleBid(b)}
+                      >
+                        {b.tender && `${displayTenderCode(b.tender.code)} | `}
+                        {b.supplier && `${b.supplier.legalName} | `}
+                        {b.id.slice(0, 8)}... | {b.status} |{' '}
+                        {formatMoney(b.totalAmount, b.currency)}
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -2986,7 +3052,12 @@ export function RequestingAreasPage() {
                   className="button danger"
                   type="button"
                   onClick={() => {
-                    if (confirm('Anular area solicitante?')) remove.mutate(String(row.id));
+                    void confirmAction({
+                      title: 'Anular área solicitante',
+                      message: 'El área dejará de estar disponible para nuevas licitaciones.',
+                      confirmLabel: 'Anular',
+                      tone: 'danger',
+                    }).then((confirmed) => confirmed && remove.mutate(String(row.id)));
                   }}
                 >
                   <Trash2 size={16} /> Anular
@@ -3106,7 +3177,12 @@ function CatalogManagementPage({
                   className="button danger"
                   type="button"
                   onClick={() => {
-                    if (confirm('Eliminar ' + singular.toLowerCase() + '?')) remove.mutate(row.id);
+                    void confirmAction({
+                      title: 'Eliminar ' + singular.toLowerCase(),
+                      message: 'Esta opción dejará de estar disponible.',
+                      confirmLabel: 'Eliminar',
+                      tone: 'danger',
+                    }).then((confirmed) => confirmed && remove.mutate(row.id));
                   }}
                   disabled={remove.isPending}
                 >

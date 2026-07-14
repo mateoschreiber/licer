@@ -1,41 +1,34 @@
-import { FileText, HelpCircle, LogOut, UserRound } from 'lucide-react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { FileText, HelpCircle, Mail, UserRound } from 'lucide-react';
+import { ApplicationShell, ShellNavGroup } from '../../shared/components/ApplicationShell';
 import { useAuth } from '../../shared/auth/AuthProvider';
+
+const groups: ShellNavGroup[] = [
+  {
+    label: 'Cuenta',
+    items: [
+      { label: 'Mi perfil', to: '/supplier/profile', icon: UserRound },
+      { label: 'Mis documentos', to: '/supplier/documents', icon: FileText },
+    ],
+  },
+  {
+    label: 'Licitaciones',
+    items: [
+      { label: 'Disponibles', to: '/supplier/tenders', icon: FileText },
+      { label: 'Mis consultas', to: '/supplier/questions', icon: HelpCircle },
+      { label: 'Comunicaciones', to: '/supplier/communications', icon: Mail },
+    ],
+  },
+];
 
 export function SupplierLayout() {
   const { logout, user } = useAuth();
-
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <span className="brand-mark">PL</span>
-          <div>
-            <strong>Proveedor</strong>
-            <span>{user?.name}</span>
-          </div>
-        </div>
-        <nav>
-          <NavLink to="/supplier/profile">
-            <UserRound size={18} /> Perfil
-          </NavLink>
-          <NavLink to="/supplier/documents">
-            <FileText size={18} /> Documentos
-          </NavLink>
-          <NavLink to="/supplier/tenders">
-            <FileText size={18} /> Licitaciones
-          </NavLink>
-          <NavLink to="/supplier/questions">
-            <HelpCircle size={18} /> Consultas
-          </NavLink>
-        </nav>
-        <button className="nav-button" type="button" onClick={() => void logout()}>
-          <LogOut size={18} /> Salir
-        </button>
-      </aside>
-      <section className="content">
-        <Outlet />
-      </section>
-    </div>
+    <ApplicationShell
+      workspace="Portal proveedor"
+      groups={groups}
+      user={user}
+      onLogout={logout}
+      tone="supplier"
+    />
   );
 }

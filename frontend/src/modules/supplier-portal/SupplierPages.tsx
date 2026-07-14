@@ -11,6 +11,8 @@ import { PageHeader } from '../../shared/components/PageHeader';
 import { StatusBadge } from '../../shared/components/StatusBadge';
 import { TenderSelector } from '../../shared/components/TenderSelector';
 import { PhoneInput } from '../../shared/components/PhoneInput';
+import { confirmAction } from '../../shared/components/FeedbackHost';
+import { LoadingState } from '../../shared/components/UiPrimitives';
 import {
   displayTenderCode,
   formatMoney,
@@ -350,7 +352,7 @@ export function SupplierProfilePage() {
       </div>
       {tab === 'profile' ? (
         !data ? (
-          <section className="panel">Cargando perfil...</section>
+          <LoadingState label="Cargando perfil" />
         ) : (
           <section className="panel">
             <div className="section-heading">
@@ -507,7 +509,12 @@ export function SupplierProfilePage() {
                         className="button danger"
                         type="button"
                         onClick={() => {
-                          if (confirm('Eliminar funcionario?')) removeStaff.mutate(String(row.id));
+                          void confirmAction({
+                            title: 'Eliminar funcionario',
+                            message: 'El funcionario se quitará de la información del proveedor.',
+                            confirmLabel: 'Eliminar',
+                            tone: 'danger',
+                          }).then((confirmed) => confirmed && removeStaff.mutate(String(row.id)));
                         }}
                       >
                         <Trash2 size={16} /> Eliminar
@@ -735,12 +742,20 @@ export function SupplierDocumentsPage() {
                       className="button danger"
                       type="button"
                       onClick={() => {
-                        if (confirm('Eliminar documento?'))
-                          api
-                            .delete('/suppliers/me/documents/' + String(row.id))
-                            .then(() =>
-                              queryClient.invalidateQueries({ queryKey: ['supplier-profile'] }),
-                            );
+                        void confirmAction({
+                          title: 'Eliminar documento',
+                          message: 'El documento dejará de estar disponible en su perfil.',
+                          confirmLabel: 'Eliminar',
+                          tone: 'danger',
+                        }).then((confirmed) => {
+                          if (confirmed) {
+                            void api
+                              .delete('/suppliers/me/documents/' + String(row.id))
+                              .then(() =>
+                                queryClient.invalidateQueries({ queryKey: ['supplier-profile'] }),
+                              );
+                          }
+                        });
                       }}
                     >
                       <Trash2 size={16} /> Eliminar
@@ -835,7 +850,7 @@ export function TenderDetailPage() {
         }
       />
       {!data ? (
-        <section className="panel">Cargando licitacion...</section>
+        <LoadingState label="Cargando licitación" />
       ) : (
         <>
           <section className="panel tender-detail">
@@ -1132,7 +1147,7 @@ export function SupplierQuestionDetailPage() {
         }
       />
       {!data ? (
-        <section className="panel">Cargando consulta...</section>
+        <LoadingState label="Cargando consulta" />
       ) : (
         <section className="panel ticket">
           <div className="ticket-head">
@@ -1548,7 +1563,7 @@ export function MyBidDetailPage() {
         }
       />
       {!data ? (
-        <section className="panel">Cargando oferta...</section>
+        <LoadingState label="Cargando oferta" />
       ) : (
         <>
           <section className="panel tender-detail">
