@@ -1,21 +1,5 @@
 import { ReactNode } from 'react';
-import {
-  AlertCircle,
-  BarChart3,
-  ChevronLeft,
-  ChevronRight,
-  Inbox,
-  MoreHorizontal,
-  RefreshCw,
-} from 'lucide-react';
-
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`panel ${className}`.trim()}>{children}</section>;
-}
-
-export function Toolbar({ children }: { children: ReactNode }) {
-  return <div className="toolbar">{children}</div>;
-}
+import { BarChart3, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 
 export function MetricCard({
   label,
@@ -120,23 +104,6 @@ export function EmptyState({
   );
 }
 
-export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
-  return (
-    <div className="error-state" role="alert">
-      <AlertCircle size={20} aria-hidden="true" />
-      <div>
-        <strong>No pudimos cargar esta información</strong>
-        <p>{message}</p>
-      </div>
-      {onRetry ? (
-        <button className="button ghost" type="button" onClick={onRetry}>
-          <RefreshCw size={16} /> Reintentar
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
 export function Pagination({
   page,
   pageCount,
@@ -170,30 +137,5 @@ export function Pagination({
         <ChevronRight size={17} />
       </button>
     </nav>
-  );
-}
-
-export function ContextMenu({
-  label = 'Más acciones',
-  children,
-}: {
-  label?: string;
-  children: ReactNode;
-}) {
-  return (
-    <details className="context-menu">
-      <summary className="icon-button" aria-label={label} title={label}>
-        <MoreHorizontal size={18} />
-      </summary>
-      <div className="context-menu-content">{children}</div>
-    </details>
-  );
-}
-
-export function Tooltip({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <span className="tooltip" data-tooltip={label} tabIndex={0}>
-      {children}
-    </span>
   );
 }

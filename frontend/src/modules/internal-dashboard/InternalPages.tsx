@@ -9,10 +9,8 @@ import { useAuth } from '../../shared/auth/AuthProvider';
 import { BidSummary, TenderSummary } from '../../shared/types';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { DataTable } from '../../shared/components/DataTable';
-import { EvaluationMatrix } from '../../shared/components/EvaluationMatrix';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { StatusBadge } from '../../shared/components/StatusBadge';
-import { Timeline } from '../../shared/components/Timeline';
 import { TenderSelector } from '../../shared/components/TenderSelector';
 import { SupplierSelector } from '../../shared/components/SupplierSelector';
 import { PhoneInput } from '../../shared/components/PhoneInput';
@@ -1849,96 +1847,6 @@ export function TenderDetailInternalPage() {
   );
 }
 
-export function DocumentsAddendasPage() {
-  const queryClient = useQueryClient();
-  const [uploadingDocument, setUploadingDocument] = useState(false);
-  const { register, handleSubmit, setValue, watch, reset } = useForm<{
-    tenderId: string;
-    type: string;
-    title: string;
-    fileId: string;
-  }>();
-  const { data = [] } = useQuery({
-    queryKey: ['internal-documents'],
-    queryFn: () => api.get<Row[]>('/tender-documents'),
-  });
-  const create = useMutation({
-    mutationFn: (values: { tenderId: string; type: string; title: string; fileId: string }) =>
-      api.post('/tender-documents', values),
-    onSuccess: () => {
-      reset();
-      return queryClient.invalidateQueries({ queryKey: ['internal-documents'] });
-    },
-  });
-  async function selectDocumentFile(file?: File) {
-    if (!file) return;
-    setUploadingDocument(true);
-    try {
-      const body = new FormData();
-      body.append('file', file);
-      const uploaded = await apiRequest<{ id: string }>('/files/upload', { method: 'POST', body });
-      setValue('fileId', uploaded.id, { shouldValidate: true });
-      setValue('title', file.name, { shouldValidate: true });
-    } finally {
-      setUploadingDocument(false);
-    }
-  }
-
-  return (
-    <>
-      <PageHeader title="Documentos y addendas" />
-      <section className="panel">
-        <form
-          className="grid-form compact"
-          onSubmit={handleSubmit((values) => create.mutate(values))}
-        >
-          <input type="hidden" {...register('tenderId', { required: true })} />
-          <TenderSelector
-            value={watch('tenderId') ?? ''}
-            onChange={(id) => setValue('tenderId', id, { shouldValidate: true })}
-            label="Licitacion"
-            required
-          />
-          <label>
-            Tipo
-            <input {...register('type', { required: true })} placeholder="BASE / ADDENDA" />
-          </label>
-          <label>
-            Codigo
-            <input value="Se genera automaticamente" disabled />
-          </label>
-          <label>
-            Titulo
-            <input {...register('title', { required: true })} />
-          </label>
-          <input type="hidden" {...register('fileId', { required: true })} />
-          <label>
-            Archivo (max. 2 MB)
-            <input
-              type="file"
-              onChange={(event) => void selectDocumentFile(event.target.files?.[0])}
-            />
-          </label>
-          <button className="button primary" type="submit" disabled={uploadingDocument}>
-            {uploadingDocument ? 'Cargando...' : 'Agregar'}
-          </button>
-          <button className="button ghost" type="button" onClick={() => reset()}>
-            Cancelar
-          </button>
-        </form>
-      </section>
-      <DataTable
-        rows={data}
-        columns={[
-          { key: 'title', header: 'Titulo', render: (row) => String(row.title) },
-          { key: 'type', header: 'Tipo', render: (row) => String(row.type) },
-          { key: 'version', header: 'Version', render: (row) => String(row.version) },
-        ]}
-      />
-    </>
-  );
-}
-
 export function QuestionsInboxPage() {
   const { data = [] } = useQuery({
     queryKey: ['internal-questions'],
@@ -2320,74 +2228,6 @@ export function BidDetailInternalPage() {
           </section>
         </>
       )}
-    </>
-  );
-}
-
-function EvaluationPage({ title }: { title: string }) {
-  const [tenderId, setTenderId] = useState('');
-  const { data = [] } = useQuery({
-    queryKey: ['evaluation', tenderId],
-    queryFn: () =>
-      api.get<
-        Array<{ id: string; category: string; name: string; weight: string; maxScore: string }>
-      >(`/evaluations?tenderId=${tenderId}`),
-    enabled: tenderId.length > 0,
-  });
-
-  return (
-    <>
-      <PageHeader title={title} />
-      <section className="panel">
-        <TenderSelector value={tenderId} onChange={(id) => setTenderId(id)} label="Licitacion" />
-      </section>
-      <EvaluationMatrix rows={data} />
-    </>
-  );
-}
-
-export function DocumentalEvaluationPage() {
-  return <EvaluationPage title="Evaluacion documental" />;
-}
-
-export function TechnicalEvaluationPage() {
-  return <EvaluationPage title="Evaluacion tecnica" />;
-}
-
-export function EconomicEvaluationPage() {
-  return <EvaluationPage title="Evaluacion economica" />;
-}
-
-export function InternalComparisonPage() {
-  const { data = [] } = useQuery({
-    queryKey: ['comparison-bids'],
-    queryFn: () => api.get<BidSummary[]>('/bids'),
-  });
-
-  return (
-    <>
-      <PageHeader title="Comparativo interno" description="No visible para proveedores." />
-      <DataTable
-        rows={data}
-        columns={[
-          {
-            key: 'tender',
-            header: 'Licitacion',
-            render: (row) => (row.tender?.code ? displayTenderCode(row.tender.code) : '-'),
-          },
-          { key: 'supplier', header: 'Proveedor', render: (row) => row.supplierId },
-          {
-            key: 'total',
-            header: 'Total',
-            render: (row) =>
-              formatMoney(
-                row.totalAmount as string | number | null | undefined,
-                row.tender?.currency as string | undefined,
-              ),
-          },
-          { key: 'status', header: 'Estado', render: (row) => <StatusBadge status={row.status} /> },
-        ]}
-      />
     </>
   );
 }

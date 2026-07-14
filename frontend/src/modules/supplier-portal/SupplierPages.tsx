@@ -13,6 +13,7 @@ import { TenderSelector } from '../../shared/components/TenderSelector';
 import { PhoneInput } from '../../shared/components/PhoneInput';
 import { confirmAction, notify } from '../../shared/components/FeedbackHost';
 import { LoadingState } from '../../shared/components/UiPrimitives';
+import { AuthLayout } from '../../shared/components/AuthLayout';
 import {
   displayTenderCode,
   formatMoney,
@@ -167,84 +168,87 @@ export function SupplierRegisterPage() {
   }
 
   return (
-    <main className="auth-screen">
-      <section className="auth-panel wide">
-        <h1>Registro proveedor</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid-form">
-          <label>
-            RUC
-            <input {...register('ruc', { required: true })} />
-          </label>
-          <label>
-            Razon social
-            <input {...register('legalName', { required: true })} />
-          </label>
-          <label>
-            Correo de facturacion
-            <input type="email" {...register('billingEmail', { required: true })} />
-          </label>
-          <label>
-            Direccion de facturacion
-            <input {...register('billingAddress', { required: true })} />
-          </label>
-          <label>
-            Nombre comercial
-            <input {...register('tradeName')} />
-          </label>
-          <label>
-            Nombre del representante legal
-            <input autoComplete="given-name" {...register('legalRepresentativeFirstName')} />
-          </label>
-          <label>
-            Apellido del representante legal
-            <input autoComplete="family-name" {...register('legalRepresentativeLastName')} />
-          </label>
-          <label>
-            Cedula de identidad del representante
-            <input inputMode="numeric" {...register('legalRepresentativeDocumentId')} />
-          </label>
-          <label>
-            Correo de contacto
-            <input type="email" {...register('contactEmail')} />
-          </label>
-          <label>
-            Telefono
-            <input type="hidden" {...register('phone')} />
-            <PhoneInput
-              value={watch('phone') ?? ''}
-              country={watch('phoneCountry') ?? 'PY'}
-              onChange={(phone) => setValue('phone', phone, { shouldDirty: true })}
-              onCountryChange={(country) =>
-                setValue('phoneCountry', country, { shouldDirty: true })
-              }
-            />
-          </label>
-          <label>
-            Tiempo de trabajo con la empresa licitante
-            <input {...register('clientRelationshipDuration')} placeholder="Ej.: 2 anos" />
-          </label>
-          <label>
-            Usuario
-            <input
-              autoComplete="username"
-              {...register('username', { required: true, minLength: 3 })}
-            />
-          </label>
-          <label>
-            Password
-            <input type="password" {...register('password', { required: true })} />
-          </label>
-          <div className="form-actions full">
-            <button className="button primary" type="submit" disabled={formState.isSubmitting}>
-              {formState.isSubmitting ? 'Enviando solicitud...' : 'Solicitar registro'}
-            </button>
-            <button className="button ghost" type="button" onClick={() => navigate('/login')}>
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </section>
-    </main>
+    <AuthLayout
+      wide
+      title="Registro de proveedor"
+      description="Complete los datos de la empresa y las credenciales de acceso."
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="grid-form auth-register-form">
+        <label>
+          RUC
+          <input {...register('ruc', { required: true })} />
+        </label>
+        <label>
+          Razón social
+          <input {...register('legalName', { required: true })} />
+        </label>
+        <label>
+          Correo de facturación
+          <input type="email" {...register('billingEmail', { required: true })} />
+        </label>
+        <label>
+          Dirección de facturación
+          <input {...register('billingAddress', { required: true })} />
+        </label>
+        <label>
+          Nombre comercial
+          <input {...register('tradeName')} />
+        </label>
+        <label>
+          Nombre del representante legal
+          <input autoComplete="given-name" {...register('legalRepresentativeFirstName')} />
+        </label>
+        <label>
+          Apellido del representante legal
+          <input autoComplete="family-name" {...register('legalRepresentativeLastName')} />
+        </label>
+        <label>
+          Cédula de identidad del representante
+          <input inputMode="numeric" {...register('legalRepresentativeDocumentId')} />
+        </label>
+        <label>
+          Correo de contacto
+          <input type="email" {...register('contactEmail')} />
+        </label>
+        <label>
+          Teléfono
+          <input type="hidden" {...register('phone')} />
+          <PhoneInput
+            value={watch('phone') ?? ''}
+            country={watch('phoneCountry') ?? 'PY'}
+            onChange={(phone) => setValue('phone', phone, { shouldDirty: true })}
+            onCountryChange={(country) => setValue('phoneCountry', country, { shouldDirty: true })}
+          />
+        </label>
+        <label>
+          Tiempo de trabajo con la empresa licitante
+          <input {...register('clientRelationshipDuration')} placeholder="Ej.: 2 anos" />
+        </label>
+        <label>
+          Usuario
+          <input
+            autoComplete="username"
+            {...register('username', { required: true, minLength: 3 })}
+          />
+        </label>
+        <label>
+          Contraseña
+          <input
+            type="password"
+            autoComplete="new-password"
+            {...register('password', { required: true })}
+          />
+        </label>
+        <div className="form-actions full">
+          <button className="button primary" type="submit" disabled={formState.isSubmitting}>
+            {formState.isSubmitting ? 'Enviando solicitud...' : 'Solicitar registro'}
+          </button>
+          <button className="button ghost" type="button" onClick={() => navigate('/login')}>
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </AuthLayout>
   );
 }
 
@@ -986,7 +990,7 @@ export function TenderDocumentsPage() {
   return (
     <>
       <PageHeader
-        title="Documentos y addendas"
+        title="Adjuntos de la licitación"
         actions={
           <button
             className="button ghost"

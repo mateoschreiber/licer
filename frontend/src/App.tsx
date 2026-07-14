@@ -58,9 +58,6 @@ const TenderBranchesPage = lazy(() =>
 const TenderDetailInternalPage = lazy(() =>
   internalPages().then((module) => ({ default: module.TenderDetailInternalPage })),
 );
-const DocumentsAddendasPage = lazy(() =>
-  internalPages().then((module) => ({ default: module.DocumentsAddendasPage })),
-);
 const QuestionsInboxPage = lazy(() =>
   internalPages().then((module) => ({ default: module.QuestionsInboxPage })),
 );
@@ -72,18 +69,6 @@ const BidsInboxPage = lazy(() =>
 );
 const BidDetailInternalPage = lazy(() =>
   internalPages().then((module) => ({ default: module.BidDetailInternalPage })),
-);
-const DocumentalEvaluationPage = lazy(() =>
-  internalPages().then((module) => ({ default: module.DocumentalEvaluationPage })),
-);
-const TechnicalEvaluationPage = lazy(() =>
-  internalPages().then((module) => ({ default: module.TechnicalEvaluationPage })),
-);
-const EconomicEvaluationPage = lazy(() =>
-  internalPages().then((module) => ({ default: module.EconomicEvaluationPage })),
-);
-const InternalComparisonPage = lazy(() =>
-  internalPages().then((module) => ({ default: module.InternalComparisonPage })),
 );
 const AwardCancelDesertPage = lazy(() =>
   internalPages().then((module) => ({ default: module.AwardCancelDesertPage })),
@@ -186,15 +171,10 @@ export function App() {
             <Route path="tenders/categories" element={<TenderCategoriesPage />} />
             <Route path="tenders/branches" element={<TenderBranchesPage />} />
             <Route path="tenders/:id" element={<TenderDetailInternalPage />} />
-            <Route path="documents" element={<DocumentsAddendasPage />} />
             <Route path="questions" element={<QuestionsInboxPage />} />
             <Route path="questions/:id" element={<QuestionDetailInternalPage />} />
             <Route path="bids" element={<BidsInboxPage />} />
             <Route path="bids/:id" element={<BidDetailInternalPage />} />
-            <Route path="evaluation/documental" element={<DocumentalEvaluationPage />} />
-            <Route path="evaluation/technical" element={<TechnicalEvaluationPage />} />
-            <Route path="evaluation/economic" element={<EconomicEvaluationPage />} />
-            <Route path="comparison" element={<InternalComparisonPage />} />
             <Route path="awards" element={<AwardCancelDesertPage />} />
             <Route path="expediente" element={<ExpedientePage />} />
             <Route path="audit" element={<AuditLogsPage />} />

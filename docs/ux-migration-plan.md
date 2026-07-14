@@ -27,8 +27,8 @@ Resultado: layouts interno y proveedor consumen el mismo shell y todas las panta
 2. Shells: navegación interna y del proveedor.
 3. Resumen y listados: dashboard, licitaciones, proveedores, consultas, ofertas, auditoría y comunicaciones.
 4. Detalles: proveedor, licitación, oferta, consulta, expediente y comprobante.
-5. Formularios y CRUD: usuarios/roles, áreas, categorías, sucursales, licitación, oferta, documentos y perfil.
-6. Evaluación y decisión: matrices documental/técnica/económica, comparación y adjudicación.
+5. Formularios y CRUD: usuarios/roles, áreas, categorías, sucursales, licitación, oferta y perfil.
+6. Decisión: adjudicación, cancelación o declaración desierta.
 
 Resultado: todas las rutas usan el sistema nuevo; no queda una pantalla con el aspecto anterior.
 

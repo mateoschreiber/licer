@@ -54,13 +54,8 @@ const requiredRoutes = [
   'requesting-areas',
   'suppliers',
   'tenders',
-  'documents',
   'questions',
   'bids',
-  'evaluation/documental',
-  'evaluation/technical',
-  'evaluation/economic',
-  'comparison',
   'awards',
   'expediente',
   'audit',
@@ -69,7 +64,20 @@ for (const route of requiredRoutes) {
   if (!app.includes(`path="${route}"`)) errors.push(`Falta la ruta ${route}`);
 }
 if (!app.includes('path="*"')) errors.push('Falta la página 404');
-if (routeCount < 40) errors.push(`Solo se detectaron ${routeCount} declaraciones de ruta`);
+if (routeCount < 38) errors.push(`Solo se detectaron ${routeCount} declaraciones de ruta`);
+
+for (const removedRoute of [
+  'path="evaluation/documental"',
+  'path="evaluation/technical"',
+  'path="evaluation/economic"',
+  'path="comparison"',
+]) {
+  if (app.includes(removedRoute)) errors.push(`La ruta retirada sigue declarada: ${removedRoute}`);
+}
+
+if (app.includes('DocumentsAddendasPage')) {
+  errors.push('El módulo administrativo de documentos y adendas sigue declarado');
+}
 
 for (const layout of [
   'modules/internal-dashboard/InternalLayout.tsx',

@@ -1,15 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Command,
-  LogOut,
-  LucideIcon,
-  Menu,
-  Search,
-  X,
-} from 'lucide-react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { ChevronLeft, ChevronRight, LogOut, LucideIcon, Menu, X } from 'lucide-react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { UserSession } from '../types';
 
 export interface ShellNavItem {
@@ -19,14 +10,9 @@ export interface ShellNavItem {
   end?: boolean;
 }
 
-export interface ShellNavGroup {
-  label: string;
-  items: ShellNavItem[];
-}
-
 interface ApplicationShellProps {
   workspace: string;
-  groups: ShellNavGroup[];
+  items: ShellNavItem[];
   user: UserSession | null;
   onLogout: () => Promise<void>;
   tone?: 'internal' | 'supplier';
@@ -34,17 +20,14 @@ interface ApplicationShellProps {
 
 export function ApplicationShell({
   workspace,
-  groups,
+  items,
   user,
   onLogout,
   tone = 'supplier',
 }: ApplicationShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [query, setQuery] = useState('');
-  const searchRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -52,10 +35,6 @@ export function ApplicationShell({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        searchRef.current?.focus();
-      }
       if (event.key === 'Escape') {
         setDrawerOpen(false);
       }
@@ -64,20 +43,6 @@ export function ApplicationShell({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const filteredGroups = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase('es');
-    if (!normalized) return groups;
-    return groups
-      .map((group) => ({
-        ...group,
-        items: group.items.filter((item) =>
-          item.label.toLocaleLowerCase('es').includes(normalized),
-        ),
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [groups, query]);
-
-  const firstResult = filteredGroups[0]?.items[0];
   const initials = user?.name
     ? user.name
         .split(/\s+/)
@@ -148,39 +113,13 @@ export function ApplicationShell({
           </button>
         </div>
 
-        <label className="quick-search">
-          <Search size={17} aria-hidden="true" />
-          <span className="sr-only">Buscar una sección</span>
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && firstResult) navigate(firstResult.to);
-            }}
-            placeholder="Buscar sección"
-          />
-          <span className="shortcut" aria-hidden="true">
-            <Command size={12} /> K
-          </span>
-        </label>
-
         <nav className="sidebar-nav">
-          {filteredGroups.length ? (
-            filteredGroups.map((group) => (
-              <div className="nav-group" key={group.label}>
-                <span className="nav-group-label">{group.label}</span>
-                {group.items.map(({ icon: Icon, ...item }) => (
-                  <NavLink key={item.to} to={item.to} end={item.end} title={item.label}>
-                    <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
-                    <span>{item.label}</span>
-                  </NavLink>
-                ))}
-              </div>
-            ))
-          ) : (
-            <p className="nav-empty">Sin coincidencias</p>
-          )}
+          {items.map(({ icon: Icon, ...item }) => (
+            <NavLink key={item.to} to={item.to} end={item.end} title={item.label}>
+              <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
         </nav>
 
         <div className="sidebar-footer">

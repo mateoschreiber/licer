@@ -54,30 +54,25 @@ Referencia: dashboard SaaS/B2B de analítica aportado por el usuario. Se adoptan
 
 ### Administración interna
 
-| Ruta                              | Pantalla                     | Propósito                        |
-| --------------------------------- | ---------------------------- | -------------------------------- |
-| `/internal`                       | `DashboardPage`              | Resumen operativo                |
-| `/internal/users-roles`           | `UsersRolesPage`             | Usuarios, roles y permisos       |
-| `/internal/requesting-areas`      | `RequestingAreasPage`        | Áreas solicitantes               |
-| `/internal/suppliers`             | `SuppliersManagementPage`    | Gestión de proveedores           |
-| `/internal/suppliers/:id`         | `SupplierDetailPage`         | Datos y documentos del proveedor |
-| `/internal/tenders`               | `TendersManagementPage`      | Gestión de licitaciones          |
-| `/internal/tenders/new`           | `TenderCreateEditPage`       | Creación de licitación           |
-| `/internal/tenders/categories`    | `TenderCategoriesPage`       | Categorías                       |
-| `/internal/tenders/branches`      | `TenderBranchesPage`         | Sucursales                       |
-| `/internal/tenders/:id`           | `TenderDetailInternalPage`   | Expediente de licitación         |
-| `/internal/documents`             | `DocumentsAddendasPage`      | Documentos y adendas             |
-| `/internal/questions`             | `QuestionsInboxPage`         | Bandeja de consultas             |
-| `/internal/questions/:id`         | `QuestionDetailInternalPage` | Respuesta tipo ticket            |
-| `/internal/bids`                  | `BidsInboxPage`              | Bandeja de ofertas               |
-| `/internal/bids/:id`              | `BidDetailInternalPage`      | Detalle de oferta                |
-| `/internal/evaluation/documental` | `DocumentalEvaluationPage`   | Evaluación documental            |
-| `/internal/evaluation/technical`  | `TechnicalEvaluationPage`    | Evaluación técnica               |
-| `/internal/evaluation/economic`   | `EconomicEvaluationPage`     | Evaluación económica             |
-| `/internal/comparison`            | `InternalComparisonPage`     | Comparativa de ofertas           |
-| `/internal/awards`                | `AwardCancelDesertPage`      | Decisión final                   |
-| `/internal/expediente`            | `ExpedientePage`             | Trazabilidad del expediente      |
-| `/internal/audit`                 | `AuditLogsPage`              | Auditoría del sistema            |
+| Ruta                           | Pantalla                     | Propósito                        |
+| ------------------------------ | ---------------------------- | -------------------------------- |
+| `/internal`                    | `DashboardPage`              | Resumen operativo                |
+| `/internal/users-roles`        | `UsersRolesPage`             | Usuarios, roles y permisos       |
+| `/internal/requesting-areas`   | `RequestingAreasPage`        | Áreas solicitantes               |
+| `/internal/suppliers`          | `SuppliersManagementPage`    | Gestión de proveedores           |
+| `/internal/suppliers/:id`      | `SupplierDetailPage`         | Datos y documentos del proveedor |
+| `/internal/tenders`            | `TendersManagementPage`      | Gestión de licitaciones          |
+| `/internal/tenders/new`        | `TenderCreateEditPage`       | Creación de licitación           |
+| `/internal/tenders/categories` | `TenderCategoriesPage`       | Categorías                       |
+| `/internal/tenders/branches`   | `TenderBranchesPage`         | Sucursales                       |
+| `/internal/tenders/:id`        | `TenderDetailInternalPage`   | Expediente de licitación         |
+| `/internal/questions`          | `QuestionsInboxPage`         | Bandeja de consultas             |
+| `/internal/questions/:id`      | `QuestionDetailInternalPage` | Respuesta tipo ticket            |
+| `/internal/bids`               | `BidsInboxPage`              | Bandeja de ofertas               |
+| `/internal/bids/:id`           | `BidDetailInternalPage`      | Detalle de oferta                |
+| `/internal/awards`             | `AwardCancelDesertPage`      | Decisión final                   |
+| `/internal/expediente`         | `ExpedientePage`             | Trazabilidad del expediente      |
+| `/internal/audit`              | `AuditLogsPage`              | Auditoría del sistema            |
 
 ## Componentes compartidos existentes
 
@@ -85,19 +80,16 @@ Referencia: dashboard SaaS/B2B de analítica aportado por el usuario. Se adoptan
 - `DataTable`: tabla genérica básica.
 - `StatusBadge`: semántica de estados.
 - `ConfirmDialog`: confirmación modal.
-- `FileUploader`: selección de archivos.
 - `PhoneInput`: teléfono internacional.
-- `Timeline`: secuencia de eventos.
 - `TenderSelector` y `SupplierSelector`: autocompletado.
-- `EvaluationMatrix`: matriz editable.
 
-Faltan primitivas consistentes para shell responsive, navegación agrupada, búsqueda, cards, métricas enriquecidas, toolbar, tabs accesibles, skeletons, vacíos, errores, notificaciones, menús contextuales, drawer y paginación.
+Faltan primitivas consistentes para cards, métricas enriquecidas, toolbar, tabs accesibles, skeletons, vacíos, errores, notificaciones, menús contextuales, drawer y paginación.
 
 ## Hallazgos
 
 ### Jerarquía y navegación
 
-- Sidebar plana, sin grupos funcionales ni búsqueda; varias rutas internas dependen de enlaces dentro de páginas y no son descubribles.
+- Sidebar plana y directa; las rutas secundarias dependen de enlaces contextuales dentro de cada flujo.
 - En tablet/móvil la sidebar se apila sobre el contenido; no existe drawer ni control de apertura.
 - No hay encabezado móvil, breadcrumb ni acción para saltar al contenido.
 - Las acciones principales y secundarias comparten demasiado peso visual.

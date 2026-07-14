@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn } from 'lucide-react';
+import { LockKeyhole, LogIn, UserRound } from 'lucide-react';
 import { useAuth } from '../../shared/auth/AuthProvider';
+import { AuthLayout } from '../../shared/components/AuthLayout';
 
 interface LoginForm {
   email: string;
@@ -27,35 +28,47 @@ export function LoginPage() {
   }
 
   return (
-    <main className="auth-screen">
-      <section className="auth-panel">
-        <div className="brand-block">
-          <span className="brand-mark">LI</span>
-          <div>
-            <h1>Portal de Licitaciones</h1>
-            <p>Acceso seguro para empresa y proveedores.</p>
-          </div>
-        </div>
-        <form onSubmit={handleSubmit(onSubmit)} className="stack-form">
-          <label>
-            Usuario o correo
+    <AuthLayout
+      title="Iniciar sesión"
+      description="Ingrese sus credenciales para acceder a su espacio de trabajo."
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="stack-form auth-form">
+        <label>
+          Usuario o correo
+          <span className="input-with-icon">
+            <UserRound size={18} aria-hidden="true" />
             <input type="text" autoComplete="username" {...register('email', { required: true })} />
-          </label>
-          <label>
-            Password
-            <input type="password" {...register('password', { required: true })} />
-          </label>
-          {error ? <p className="form-error">{error}</p> : null}
-          <button className="button primary" type="submit" disabled={formState.isSubmitting}>
-            <LogIn size={18} />
-            {formState.isSubmitting ? 'Ingresando...' : 'Ingresar'}
-          </button>
-        </form>
-        <div className="auth-links">
-          <Link to="/reset-password">Recuperar password</Link>
-          <Link to="/supplier/register">Registrar proveedor</Link>
-        </div>
-      </section>
-    </main>
+          </span>
+        </label>
+        <label>
+          Contraseña
+          <span className="input-with-icon">
+            <LockKeyhole size={18} aria-hidden="true" />
+            <input
+              type="password"
+              autoComplete="current-password"
+              {...register('password', { required: true })}
+            />
+          </span>
+        </label>
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <button
+          className="button primary auth-submit"
+          type="submit"
+          disabled={formState.isSubmitting}
+        >
+          <LogIn size={18} />
+          {formState.isSubmitting ? 'Ingresando...' : 'Ingresar'}
+        </button>
+      </form>
+      <div className="auth-links">
+        <Link to="/reset-password">Recuperar contraseña</Link>
+        <Link to="/supplier/register">Registrar proveedor</Link>
+      </div>
+    </AuthLayout>
   );
 }
