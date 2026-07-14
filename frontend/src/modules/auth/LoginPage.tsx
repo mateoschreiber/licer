@@ -22,9 +22,15 @@ export function LoginPage() {
       .then(() => {
         const session = window.localStorage.getItem('user_session');
         const user = session ? JSON.parse(session) : null;
-        navigate(user?.roles?.includes('PROVEEDOR') ? '/supplier' : '/internal');
+        navigate(
+          user?.mustChangePassword
+            ? '/change-password'
+            : user?.roles?.includes('PROVEEDOR')
+              ? '/supplier'
+              : '/internal',
+        );
       })
-      .catch(() => setError('Credenciales invalidas o usuario inactivo.'));
+      .catch(() => setError('Credenciales inválidas o usuario inactivo.'));
   }
 
   return (

@@ -102,6 +102,8 @@ model User {
   username         String            @unique
   passwordHash     String
   name             String
+  lastName         String?
+  mustChangePassword Boolean          @default(false)
   status           UserStatus        @default(ACTIVE)
   supplierId       String?           @db.Uuid
   supplier         Supplier?         @relation(fields: [supplierId], references: [id])

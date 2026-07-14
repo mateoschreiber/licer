@@ -8,6 +8,8 @@ import { AuthenticatedUser } from '../common/auth/authenticated-user.interface';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { ResetPasswordConfirmDto, ResetPasswordRequestDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { AllowBeforePasswordChange } from '../common/decorators/allow-before-password-change.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -29,9 +31,17 @@ export class AuthController {
   }
 
   @Permissions('auth:logout:own')
+  @AllowBeforePasswordChange()
   @Post('logout')
   logout(@CurrentUser() user: AuthenticatedUser, @Res({ passthrough: true }) response: Response) {
     return this.authService.logout(response, user);
+  }
+
+  @Permissions('auth:logout:own')
+  @AllowBeforePasswordChange()
+  @Post('change-password')
+  changePassword(@Body() dto: ChangePasswordDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.authService.changePassword(user, dto);
   }
 
   @Public()

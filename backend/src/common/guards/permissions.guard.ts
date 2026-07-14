@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { RequestWithUser } from '../auth/request-with-user.interface';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { ALLOW_BEFORE_PASSWORD_CHANGE_KEY } from '../decorators/allow-before-password-change.decorator';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -16,6 +17,11 @@ export class PermissionsGuard implements CanActivate {
     if (isPublic) {
       return true;
     }
+    const allowBeforePasswordChange = this.reflector.getAllAndOverride<boolean>(
+      ALLOW_BEFORE_PASSWORD_CHANGE_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (allowBeforePasswordChange) return true;
 
     const requiredPermissions = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
       context.getHandler(),

@@ -17,6 +17,7 @@ interface LoginResponse {
 interface AuthContextValue {
   user: UserSession | null;
   login: (email: string, password: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
   hasRole: (roles: string[]) => boolean;
 }
@@ -51,6 +52,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, []);
 
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    await api.post('/auth/change-password', { currentPassword, newPassword });
+    setUser((current) => {
+      if (!current) return current;
+      const updated = { ...current, mustChangePassword: false };
+      window.localStorage.setItem('user_session', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   const hasRole = useCallback(
     (roles: string[]) => {
       if (!roles.length) {
@@ -64,7 +75,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [user],
   );
 
-  const value = useMemo(() => ({ user, login, logout, hasRole }), [user, login, logout, hasRole]);
+  const value = useMemo(
+    () => ({ user, login, changePassword, logout, hasRole }),
+    [user, login, changePassword, logout, hasRole],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

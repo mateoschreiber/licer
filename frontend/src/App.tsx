@@ -11,6 +11,11 @@ const ResetPasswordPage = lazy(() =>
     default: module.ResetPasswordPage,
   })),
 );
+const ChangePasswordPage = lazy(() =>
+  import('./modules/auth/ChangePasswordPage').then((module) => ({
+    default: module.ChangePasswordPage,
+  })),
+);
 const InternalLayout = lazy(() =>
   import('./modules/internal-dashboard/InternalLayout').then((module) => ({
     default: module.InternalLayout,
@@ -134,6 +139,7 @@ export function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/supplier/register" element={<SupplierRegisterPage />} />
 
         <Route element={<ProtectedRoute roles={['PROVEEDOR']} />}>

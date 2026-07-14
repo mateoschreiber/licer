@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthenticatedUser } from '../common/auth/authenticated-user.interface';
 import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -87,6 +88,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        lastName: user.lastName,
+        mustChangePassword: user.mustChangePassword,
         supplierId: user.supplierId,
         roles,
         permissions,
@@ -120,6 +123,35 @@ export class AuthService {
       });
     }
 
+    return { ok: true };
+  }
+
+  async changePassword(user: AuthenticatedUser, dto: ChangePasswordDto) {
+    const account = await this.prisma.user.findFirst({
+      where: { id: user.id, deletedAt: null, status: 'ACTIVE' },
+    });
+    if (!account || !(await bcrypt.compare(dto.currentPassword, account.passwordHash))) {
+      throw new UnauthorizedException('La contraseña actual es incorrecta');
+    }
+    if (await bcrypt.compare(dto.newPassword, account.passwordHash)) {
+      throw new BadRequestException('La nueva contraseña debe ser diferente de la actual');
+    }
+
+    await this.prisma.user.update({
+      where: { id: account.id },
+      data: {
+        passwordHash: await bcrypt.hash(dto.newPassword, 12),
+        mustChangePassword: false,
+      },
+    });
+    await this.auditService.log({
+      actorId: account.id,
+      role: user.roles[0],
+      action: 'PASSWORD_CHANGED',
+      entity: 'User',
+      entityId: account.id,
+      result: 'ALLOWED',
+    });
     return { ok: true };
   }
 
@@ -168,6 +200,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        lastName: user.lastName,
+        mustChangePassword: user.mustChangePassword,
         supplierId: user.supplierId,
         roles,
         permissions,

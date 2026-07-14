@@ -43,8 +43,9 @@ export function ApplicationShell({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const initials = user?.name
-    ? user.name
+  const displayName = [user?.name, user?.lastName].filter(Boolean).join(' ');
+  const initials = displayName
+    ? displayName
         .split(/\s+/)
         .slice(0, 2)
         .map((part) => part[0])
@@ -128,7 +129,7 @@ export function ApplicationShell({
               {initials}
             </span>
             <div>
-              <strong>{user?.name ?? 'Usuario'}</strong>
+              <strong>{displayName || 'Usuario'}</strong>
               <span>{user?.roles[0]?.replaceAll('_', ' ') ?? workspace}</span>
             </div>
           </div>

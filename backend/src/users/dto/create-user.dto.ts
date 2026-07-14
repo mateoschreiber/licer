@@ -1,4 +1,13 @@
-import { IsArray, IsEmail, IsEnum, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 import { UserStatus } from '@prisma/client';
 
 export class CreateUserDto {
@@ -15,13 +24,16 @@ export class CreateUserDto {
   @IsString()
   name!: string;
 
+  @IsString()
+  lastName!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  mustChangePassword?: boolean;
+
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;
-
-  @IsOptional()
-  @IsUUID()
-  supplierId?: string;
 
   @IsArray()
   @IsUUID('4', { each: true })

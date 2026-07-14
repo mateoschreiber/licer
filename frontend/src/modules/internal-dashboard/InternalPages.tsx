@@ -52,6 +52,8 @@ interface UserRow extends Row {
   email: string;
   username: string;
   name: string;
+  lastName?: string | null;
+  mustChangePassword?: boolean;
   status: string;
   supplierId?: string | null;
   roles?: UserRoleRow[];
@@ -61,9 +63,10 @@ interface UserFormValues {
   email: string;
   username: string;
   name: string;
+  lastName: string;
   password: string;
+  mustChangePassword: boolean;
   status: string;
-  supplierId: string;
   roleIds: string[];
 }
 
@@ -170,7 +173,7 @@ export function UsersRolesPage() {
     queryFn: () => api.get<RoleRow[]>('/roles'),
   });
   const userForm = useForm<UserFormValues>({
-    defaultValues: { status: 'ACTIVE', roleIds: [], supplierId: '' },
+    defaultValues: { status: 'ACTIVE', roleIds: [], mustChangePassword: false },
   });
   const roleForm = useForm<RoleFormValues>({
     defaultValues: { permissionIds: [] },
@@ -197,9 +200,10 @@ export function UsersRolesPage() {
         email: values.email,
         username: values.username,
         name: values.name,
+        lastName: values.lastName,
         status: values.status,
-        supplierId: values.supplierId || undefined,
         roleIds,
+        ...(!editingUser ? { mustChangePassword: values.mustChangePassword } : {}),
         ...(values.password ? { password: values.password } : {}),
       };
 
@@ -213,9 +217,10 @@ export function UsersRolesPage() {
       userForm.reset({
         status: 'ACTIVE',
         roleIds: [],
-        supplierId: '',
+        mustChangePassword: false,
         email: '',
         name: '',
+        lastName: '',
         password: '',
       });
     },
@@ -262,9 +267,10 @@ export function UsersRolesPage() {
     userForm.reset({
       status: 'ACTIVE',
       roleIds: [],
-      supplierId: '',
+      mustChangePassword: false,
       email: '',
       name: '',
+      lastName: '',
       password: '',
     });
   }
@@ -275,9 +281,10 @@ export function UsersRolesPage() {
       email: user.email,
       username: user.username,
       name: user.name,
+      lastName: user.lastName ?? '',
       password: '',
+      mustChangePassword: user.mustChangePassword ?? false,
       status: user.status,
-      supplierId: user.supplierId ?? '',
       roleIds: (user.roles?.map((item) => item.role?.id).filter(Boolean) as string[]) ?? [],
     });
   }
@@ -303,7 +310,7 @@ export function UsersRolesPage() {
     <>
       <PageHeader
         title="Usuarios y roles"
-        description="Administracion de usuarios internos, estados y roles."
+        description="Administración de usuarios internos, estados y roles."
       />
       <div className="section-tabs" role="tablist">
         <button
@@ -339,6 +346,11 @@ export function UsersRolesPage() {
                 { key: 'email', header: 'Email', render: (row) => String(row.email) },
                 { key: 'username', header: 'Usuario', render: (row) => String(row.username) },
                 { key: 'name', header: 'Nombre', render: (row) => String(row.name) },
+                {
+                  key: 'lastName',
+                  header: 'Apellido',
+                  render: (row) => String(row.lastName ?? '-'),
+                },
                 { key: 'roles', header: 'Roles', render: (row) => roleNames(row as UserRow) },
                 {
                   key: 'status',
@@ -410,6 +422,10 @@ export function UsersRolesPage() {
                 <input {...userForm.register('name', { required: true })} />
               </label>
               <label>
+                Apellido
+                <input {...userForm.register('lastName', { required: true })} />
+              </label>
+              <label>
                 {editingUser ? 'Nueva clave (opcional)' : 'Clave inicial'}
                 <input
                   type="password"
@@ -417,6 +433,12 @@ export function UsersRolesPage() {
                   {...userForm.register('password', { required: !editingUser })}
                 />
               </label>
+              {!editingUser ? (
+                <label className="checkbox-field">
+                  <input type="checkbox" {...userForm.register('mustChangePassword')} />
+                  <span>Solicitar nueva contraseña en el primer inicio de sesión</span>
+                </label>
+              ) : null}
               <label>
                 Estado
                 <select {...userForm.register('status')}>
@@ -425,11 +447,6 @@ export function UsersRolesPage() {
                   <option value="BLOCKED">Bloqueado</option>
                 </select>
               </label>
-              <input type="hidden" {...userForm.register('supplierId')} />
-              <SupplierSelector
-                value={userForm.watch('supplierId') ?? ''}
-                onChange={(id) => userForm.setValue('supplierId', id)}
-              />
               <label>
                 Roles
                 <select
