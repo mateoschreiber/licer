@@ -12,3 +12,7 @@ compose.yml.bak*
 *.backup
 .dockerignore
 .github/
+.codex/
+graphify-out/
+openwiki/
+REPORTE_TECNICO.md
