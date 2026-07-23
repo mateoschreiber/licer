@@ -27,6 +27,35 @@ function createService(prisma: unknown, audit: unknown) {
 }
 
 describe('FilesService security rules', () => {
+  it('only accepts files whose MIME, extension and signature agree', () => {
+    const service = createService({} as PrismaService, {} as AuditService);
+
+    expect(() =>
+      service.assertValidUpload({
+        originalname: 'base.pdf',
+        mimetype: 'application/pdf',
+        buffer: Buffer.from('%PDF-1.7'),
+        size: 8,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      service.assertValidUpload({
+        originalname: 'base.pdf',
+        mimetype: 'application/pdf',
+        buffer: Buffer.from('not a pdf'),
+        size: 9,
+      }),
+    ).toThrow(ForbiddenException);
+    expect(() =>
+      service.assertValidUpload({
+        originalname: 'base.exe',
+        mimetype: 'application/pdf',
+        buffer: Buffer.from('%PDF-1.7'),
+        size: 8,
+      }),
+    ).toThrow(ForbiddenException);
+  });
+
   it('rejects supplier download of another supplier bid file', async () => {
     const audit = { log: jest.fn() };
     const prisma = {

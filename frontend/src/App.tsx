@@ -31,6 +31,7 @@ const NotFoundPage = lazy(() =>
 );
 
 const internalPages = () => import('./modules/internal-dashboard/InternalPages');
+const catalogPages = () => import('./modules/internal-dashboard/CatalogPages');
 const supplierPages = () => import('./modules/supplier-portal/SupplierPages');
 
 const DashboardPage = lazy(() =>
@@ -55,10 +56,10 @@ const TenderCreateEditPage = lazy(() =>
   internalPages().then((module) => ({ default: module.TenderCreateEditPage })),
 );
 const TenderCategoriesPage = lazy(() =>
-  internalPages().then((module) => ({ default: module.TenderCategoriesPage })),
+  catalogPages().then((module) => ({ default: module.TenderCategoriesPage })),
 );
 const TenderBranchesPage = lazy(() =>
-  internalPages().then((module) => ({ default: module.TenderBranchesPage })),
+  catalogPages().then((module) => ({ default: module.TenderBranchesPage })),
 );
 const TenderDetailInternalPage = lazy(() =>
   internalPages().then((module) => ({ default: module.TenderDetailInternalPage })),

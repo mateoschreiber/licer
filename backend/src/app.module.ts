@@ -26,10 +26,11 @@ import { RequestingAreasModule } from './requesting-areas/requesting-areas.modul
 import { HealthModule } from './health/health.module';
 import { TenderCategoriesModule } from './tender-categories/tender-categories.module';
 import { TenderBranchesModule } from './tender-branches/tender-branches.module';
+import { validateEnvironment } from './config/env.validation';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
     PrismaModule,
     AuditModule,
     AuthModule,

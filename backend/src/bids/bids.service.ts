@@ -12,11 +12,6 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBidDto } from './dto/create-bid.dto';
 
-type BidWithTenderSupplier = Bid & {
-  tender: Tender;
-  supplier: Supplier;
-};
-
 @Injectable()
 export class BidsService {
   constructor(

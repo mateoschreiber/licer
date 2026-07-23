@@ -14,13 +14,7 @@ import { PhoneInput } from '../../shared/components/PhoneInput';
 import { confirmAction, notify } from '../../shared/components/FeedbackHost';
 import { LoadingState } from '../../shared/components/UiPrimitives';
 import { AuthLayout } from '../../shared/components/AuthLayout';
-import {
-  displayTenderCode,
-  formatMoney,
-  formatPyDate,
-  formatPyDateTime,
-} from '../../shared/utils/format';
-import { API_URL } from '../../config/api';
+import { displayTenderCode, formatMoney, formatPyDateTime } from '../../shared/utils/format';
 
 interface SupplierRegisterForm {
   ruc: string;

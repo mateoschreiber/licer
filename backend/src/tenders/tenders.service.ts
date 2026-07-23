@@ -209,10 +209,10 @@ export class TendersService {
       : new Date();
     const questionDeadline = dto.questionDeadline
       ? this.parseDate(dto.questionDeadline, 'Límite de consultas inválido')
-      : this.endOfDay(this.addDays(baseDate, 15));
+      : this.endOfBusinessDay(this.addBusinessDays(baseDate, 15));
     const bidDeadline = dto.bidDeadline
       ? this.parseDate(dto.bidDeadline, 'Límite de ofertas inválido')
-      : this.endOfDay(this.addDays(baseDate, 30));
+      : this.endOfBusinessDay(this.addBusinessDays(baseDate, 30));
 
     this.assertDateOrder({ baseDate, questionDeadline, bidDeadline });
 
@@ -249,14 +249,38 @@ export class TendersService {
     }
   }
 
-  private addDays(date: Date, days: number) {
-    return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+  private addBusinessDays(date: Date, days: number) {
+    const { year, month, day } = this.asuncionDateParts(date);
+    return new Date(Date.UTC(year, month - 1, day + days, 12));
   }
 
-  private endOfDay(date: Date) {
-    const result = new Date(date);
-    result.setHours(23, 59, 59, 999);
-    return result;
+  private endOfBusinessDay(date: Date) {
+    const { year, month, day } = this.asuncionDateParts(date);
+    const localEndOfDay = Date.UTC(year, month - 1, day, 23, 59, 59, 999);
+    const offset = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Asuncion',
+      timeZoneName: 'longOffset',
+    })
+      .formatToParts(new Date(localEndOfDay))
+      .find((part) => part.type === 'timeZoneName')?.value;
+    const match = offset?.match(/^GMT([+-])(\d{2}):(\d{2})$/);
+    if (!match) {
+      throw new BadRequestException('No se pudo determinar la zona horaria de la licitación');
+    }
+    const offsetMinutes = (Number(match[2]) * 60 + Number(match[3])) * (match[1] === '+' ? 1 : -1);
+    return new Date(localEndOfDay - offsetMinutes * 60 * 1000);
+  }
+
+  private asuncionDateParts(date: Date) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Asuncion',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date);
+    const value = (type: Intl.DateTimeFormatPartTypes) =>
+      Number(parts.find((part) => part.type === type)?.value);
+    return { year: value('year'), month: value('month'), day: value('day') };
   }
 
   private async generateTenderCode(): Promise<string> {

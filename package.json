@@ -7,12 +7,18 @@
     "dev:backend": "pnpm --filter @licer/backend dev",
     "dev:frontend": "pnpm --filter @licer/frontend dev",
     "build": "pnpm --filter @licer/backend build && pnpm --filter @licer/frontend build",
-    "test": "pnpm --filter @licer/backend test",
+    "lint": "pnpm --filter @licer/backend lint && pnpm --filter @licer/frontend lint",
+    "test": "pnpm --filter @licer/backend test && pnpm --filter @licer/frontend test",
+    "test:e2e": "pnpm --filter @licer/backend test:e2e",
     "format": "prettier --write --ignore-unknown .",
     "format:check": "prettier --check --ignore-unknown .",
     "ux:check": "node scripts/verify-ux.mjs"
   },
   "devDependencies": {
-    "prettier": "3.5.3"
+    "@eslint/js": "^9.21.0",
+    "eslint": "^9.21.0",
+    "globals": "^15.15.0",
+    "prettier": "3.5.3",
+    "typescript-eslint": "^8.24.0"
   }
 }

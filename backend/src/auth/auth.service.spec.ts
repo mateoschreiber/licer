@@ -13,9 +13,20 @@ describe('AuthService', () => {
         }),
         update: jest.fn().mockResolvedValue({ id: 'user-1' }),
       },
+      authSession: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      $transaction: jest.fn().mockResolvedValue([]),
     };
     const audit = { log: jest.fn().mockResolvedValue(undefined) };
-    const service = new AuthService(prisma as never, {} as never, {} as never, audit as never);
+    const security = { assertAllowed: jest.fn(), clear: jest.fn(), recordFailure: jest.fn() };
+    const mailer = { isEnabled: jest.fn().mockReturnValue(false), send: jest.fn() };
+    const service = new AuthService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      audit as never,
+      security as never,
+      mailer as never,
+    );
 
     await expect(
       service.changePassword(

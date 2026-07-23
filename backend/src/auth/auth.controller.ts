@@ -33,8 +33,12 @@ export class AuthController {
   @Permissions('auth:logout:own')
   @AllowBeforePasswordChange()
   @Post('logout')
-  logout(@CurrentUser() user: AuthenticatedUser, @Res({ passthrough: true }) response: Response) {
-    return this.authService.logout(response, user);
+  logout(
+    @CurrentUser() user: AuthenticatedUser,
+    @Req() request: RequestWithUser & { cookies?: Record<string, string> },
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.authService.logout(response, request.cookies?.refresh_token, user);
   }
 
   @Permissions('auth:logout:own')
@@ -46,19 +50,24 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
-  refresh(@Req() request: RequestWithUser & { cookies?: Record<string, string> }) {
-    return this.authService.refresh(request.cookies?.refresh_token);
+  async refresh(
+    @Req() request: RequestWithUser & { cookies?: Record<string, string> },
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const session = await this.authService.refresh(request.cookies?.refresh_token);
+    this.authService.setRefreshCookie(response, session.refreshToken);
+    return { accessToken: session.accessToken, user: session.user };
   }
 
   @Public()
   @Post('reset-password/request')
-  requestPasswordReset(@Body() dto: ResetPasswordRequestDto) {
-    return this.authService.requestPasswordReset(dto.email);
+  requestPasswordReset(@Body() dto: ResetPasswordRequestDto, @Req() request: RequestWithUser) {
+    return this.authService.requestPasswordReset(dto.email, request.ip);
   }
 
   @Public()
   @Post('reset-password/confirm')
-  confirmPasswordReset(@Body() _dto: ResetPasswordConfirmDto) {
-    return this.authService.confirmPasswordReset();
+  confirmPasswordReset(@Body() dto: ResetPasswordConfirmDto, @Req() request: RequestWithUser) {
+    return this.authService.confirmPasswordReset(dto, request.ip);
   }
 }

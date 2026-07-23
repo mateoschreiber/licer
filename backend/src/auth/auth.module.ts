@@ -6,6 +6,8 @@ import { AuditModule } from '../audit/audit.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
+import { AuthSecurityService } from './auth-security.service';
+import { PasswordResetMailerService } from './password-reset-mailer.service';
 
 @Module({
   imports: [
@@ -15,7 +17,7 @@ import { JwtStrategy } from './jwt.strategy';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') ?? 'change-me-access-secret',
+        secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
           expiresIn: configService.get<string>('JWT_EXPIRES_IN') ?? '15m',
         },
@@ -23,6 +25,6 @@ import { JwtStrategy } from './jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, AuthSecurityService, PasswordResetMailerService],
 })
 export class AuthModule {}

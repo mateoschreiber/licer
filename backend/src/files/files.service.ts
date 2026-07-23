@@ -23,6 +23,12 @@ export interface FileDownloadDescriptor {
   size: number;
 }
 
+const allowedTypes = new Map<string, { extensions: string[]; signature: number[] }>([
+  ['application/pdf', { extensions: ['.pdf'], signature: [0x25, 0x50, 0x44, 0x46, 0x2d] }],
+  ['image/png', { extensions: ['.png'], signature: [0x89, 0x50, 0x4e, 0x47] }],
+  ['image/jpeg', { extensions: ['.jpg', '.jpeg'], signature: [0xff, 0xd8, 0xff] }],
+]);
+
 @Injectable()
 export class FilesService {
   constructor(
@@ -34,7 +40,8 @@ export class FilesService {
     file: { originalname: string; mimetype: string; buffer: Buffer; size: number },
     uploadedById: string,
   ) {
-    const storageRoot = process.env.STORAGE_PRIVATE_PATH ?? '/app/storage/private';
+    const storageRoot =
+      process.env.STORAGE_PRIVATE_PATH ?? process.env.FILE_STORAGE_ROOT ?? '/app/storage/private';
     await mkdir(storageRoot, { recursive: true });
     const id = randomUUID();
     const storagePath = join(storageRoot, id);
@@ -51,6 +58,28 @@ export class FilesService {
       select: { id: true, originalName: true, mime: true, size: true },
     });
     return { ...stored, size: Number(stored.size) };
+  }
+
+  assertValidUpload(file: {
+    originalname: string;
+    mimetype: string;
+    buffer: Buffer;
+    size: number;
+  }) {
+    const definition = allowedTypes.get(file.mimetype);
+    const extension = file.originalname.toLowerCase().match(/\.[a-z0-9]+$/)?.[0];
+    const signatureMatches = definition?.signature.every(
+      (byte, index) => file.buffer[index] === byte,
+    );
+    if (
+      !definition ||
+      !extension ||
+      !definition.extensions.includes(extension) ||
+      !signatureMatches
+    ) {
+      throw new ForbiddenException('Solo se permiten archivos PDF, PNG o JPEG válidos');
+    }
+    if (file.size === 0) throw new ForbiddenException('El archivo no puede estar vacío');
   }
 
   async prepareDownload(

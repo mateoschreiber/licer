@@ -1,6 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import cookieParser = require('cookie-parser');
+import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
@@ -11,13 +11,16 @@ function parseAllowedOrigins() {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  return new Set([
-    ...origins,
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:8088',
-    'http://127.0.0.1:8088',
-  ]);
+  const developmentOrigins =
+    process.env.NODE_ENV === 'production'
+      ? []
+      : [
+          'http://localhost:5173',
+          'http://127.0.0.1:5173',
+          'http://localhost:8088',
+          'http://127.0.0.1:8088',
+        ];
+  return new Set([...origins, ...developmentOrigins]);
 }
 
 async function bootstrap() {

@@ -12,7 +12,12 @@ cd /opt/licitaciones
 cp .env.production.example .env.production
 ```
 
-Cambie todos los secretos y contraseñas de `.env.production`.
+Cambie todos los secretos y contraseñas de `.env.production`. Genere `JWT_SECRET` y
+`JWT_REFRESH_SECRET` con al menos 32 caracteres aleatorios y proteja el archivo:
+
+```bash
+chmod 600 .env.production
+```
 
 ```bash
 docker compose --env-file .env.production up -d postgres

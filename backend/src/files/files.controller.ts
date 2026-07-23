@@ -14,6 +14,8 @@ import {
 import { createReadStream, existsSync } from 'fs';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
+import { Express } from 'express';
 import { AuthenticatedUser } from '../common/auth/authenticated-user.interface';
 import { RequestWithUser } from '../common/auth/request-with-user.interface';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -22,16 +24,24 @@ import { FilesService } from './files.service';
 
 @Controller('files')
 export class FilesController {
-  constructor(private readonly filesService: FilesService) {}
+  constructor(
+    private readonly filesService: FilesService,
+    private readonly config: ConfigService,
+  ) {}
 
   @Permissions('tender-documents:create:internal', 'suppliers:update:own')
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }))
-  async upload(@UploadedFile() file: any, @CurrentUser() user: AuthenticatedUser) {
+  async upload(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const maxBytes = Number(this.config.get<string>('MAX_UPLOAD_BYTES') ?? 2 * 1024 * 1024);
     if (!file) throw new BadRequestException('Archivo requerido o superior a 2 MB');
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > maxBytes) {
       throw new BadRequestException('El archivo supera el límite máximo de 2 MB');
     }
+    this.filesService.assertValidUpload(file);
     return this.filesService.storeUpload(file, user.id);
   }
 
